@@ -1,16 +1,18 @@
 {
-  "name": "computing-2-submission",
+  "name": "kings-crossing",
   "type": "module",
   "version": "1.0.0",
-  "description": "",
-  "main": "web-app/Module.js",
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "ramda": "^0.32.0"
+  "description": "A chess-themed two-player survival game for Computing 2.",
+  "main": "web-app/KingCrossingProto.js",
+  "scripts": {
+    "test": "mocha",
+    "docs": "jsdoc -c jsdoc.json"
   },
+  "author": "Kerry",
+  "license": "ISC",
   "devDependencies": {
     "docdash": "^2.0.2",
-    "mocha": "^11.7.5"
-  }
+    "mocha": "^11.1.0"
+  },
+  "dependencies": {}
 }

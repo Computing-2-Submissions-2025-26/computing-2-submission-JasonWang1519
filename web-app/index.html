@@ -1,9 +1,60 @@
-<!-- In HTML Comments are written like this -->
-<!-- They can all be removed for your apps -->
-<!doctype html> <!-- This first line tells browsers to expect modern standard html 5 -->
-<html lang="en-gb"> <!-- This is indicates the page is written in British English, useful for accessibility -->
-<meta charset="utf-8"> <!-- This indicates how the file is encoded. utf-8 is standard -->
-<title>Your Web-app Title</title> <!-- All pages need a title, this will be displayed in the browser's title bar -->
-<link rel="stylesheet" href="default.css"> <!-- Import style sheet – default.css -->
-<link rel="icon" href="./assets/favicon.png"> <!-- Import 'Favorites Icon' – favicon.png -->
-<script type="module" src="main.js"></script> <!-- Load the main script. Must be type="module". Have only one of these -->
+<!doctype html>
+<html lang="en-gb">
+<head>
+    <meta charset="utf-8">
+    <title>King's Crossing</title>
+    <link rel="stylesheet" href="defaultProto.css">
+    <script type="module" src="mainProto.js?v=piece-cycle-3"></script>
+</head>
+
+<body>
+    <header>
+        <h1 id="title">King's Crossing</h1>
+        <a href="/docs/">API Documentation</a>
+    </header>
+
+    <main tabindex="-1" aria-label="King's Crossing game area">
+        <div
+            id="game_board"
+            role="grid"
+            aria-label="King's Crossing chess board"
+        ></div>
+    </main>
+
+    <aside id="home_player" class="sidebar" aria-label="Player 1 information">
+        <div class="player">
+            <input
+                id="home_name"
+                aria-label="Player 1 name"
+                value="Player 1"
+            >
+        </div>
+
+        <div class="game_info">
+            <h2 id="home_player_type">Escaping King</h2>
+            <p id="home_ready">The king enters the crossing...</p>
+        </div>
+    </aside>
+
+    <aside id="away_player" class="sidebar" aria-label="Player 2 information">
+        <div class="player">
+            <input
+                id="away_name"
+                aria-label="Player 2 name"
+                value="Player 2"
+            >
+        </div>
+
+        <div class="game_info">
+            <h2 id="away_player_type">Enemy Court</h2>
+            <p id="away_ready">The enemy court waits.</p>
+        </div>
+    </aside>
+
+    <dialog id="result_dialog" tabindex="0" aria-label="Game over message">
+        <h2>Game Over</h2>
+        <p id="result_message">The crossing has ended.</p>
+        <p id="result_winner">Awaiting result.</p>
+    </dialog>
+</body>
+</html>

@@ -1,53 +1,45 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/H6lPFq0J)
-# Computing 2 Coursework Submission.
-**CID**: [YOUR CID]
+# King's Crossing
 
-This is the submission template for your Computing 2 Applications coursework submission.
+King's Crossing is a chess-themed two-player survival game for Computing 2.
 
-## Checklist
-### Install dependencies locally
-This template relies on a a few packages from the Node Package Manager, npm.
-To install them run the following commands in the terminal.
-```properties
-npm install
+Player 1 controls the escaping king and tries to cross the board. Player 2
+controls the enemy court by placing chess pieces in the king's path. The pawn
+wall advances from below whenever the king moves forward, so standing still for
+too long becomes dangerous.
+
+## How to Play
+
+- Player 2 places alternating knights and bishops on the top row.
+- Player 1 moves the king with `Q`, `W`, `E`, `A`, `D`, and `S`, or by clicking
+  legal move dots.
+- Enemy pieces attack using chess-style movement.
+- The king loses if it moves onto the pawn wall, into the pawn danger row, onto
+  an enemy piece, or into an attacked square.
+- The king can capture an enemy piece only when that piece is not defended.
+- Eagle Vision reveals dangerous squares when charged.
+- Royal Jump lets the king move up to two squares when charged.
+- When the queen meter fills, the royal guard blocks the top row and the Grand
+  Regent Queen arrives for the final duel.
+- During the final duel, Player 2 can move the queen or use Queen's Wrath to
+  place a rook on an empty square that does not immediately check the king.
+- Player 1 wins by reaching the row beneath the royal guard.
+
+## Project Files
+
+- `web-app/KingCrossingProto.js` contains the pure game rules and state transitions.
+- `web-app/mainProto.js` contains the browser UI, keyboard controls, tutorial, and
+  animations.
+- `web-app/defaultProto.css` contains the board and interface styling.
+- `web-app/tests/KingCrossingProto.test.js` contains focused rule tests.
+
+## Running
+
+Open `web-app/index.html` in a browser, or serve the folder with a local static
+server.
+
+Useful commands:
+
+```sh
+npm test
+npm run docs
 ```
-These won't be uploaded to your repository because of the `.gitignore`.
-I'll run the same commands when I download your repos.
-
-### Game Module – API
-*You will produce an API specification, i.e. a list of function names and their signatures, for a Javascript module that represents the state of your game and the operations you can perform on it that advances the game or provides information.*
-
-- [ ] Include a `.js ` module file in `/web-app` containing the API using `jsdoc`.
-- [ ] Update `/jsdoc.json` to point to this module in `.source.include` (line 7)
-- [ ] Compile jsdoc using the run configuration `Generate Docs`
-- [ ] Check the generated docs have compiled correctly.
-
-### Game Module – Implementation
-*You will implement, in Javascript, the module you specified above. Such that your game can be simulated in code, e.g. in the debug console.*
-
-- [ ] The file above should be fully implemented.
-
-### Unit Tests – Specification
-*For the Game module API you have produced, write a set of unit tests descriptions that specify the expected behaviour of one aspect of your API, e.g. you might pick the win condition, or how the state changes when a move is made.*
-
-- [ ] Write unit test definitions in `/web-app/tests`.
-- [ ] Check the headings appear in the Testing sidebar.
-
-### Unit Tests – Implementation
-*Implement in code the unit tests specified above.*
-
-- [ ] Implement the tests above.
-
-### Web Application
-*Produce a web application that allows a user to interface with your game module.*
-
-- Implement in `/web-app`
-  - [ ] `index.html`
-  - [ ] `default.css`
-  - [ ] `main.js`
-  - [ ] Any other files you need to include.
-
-### Finally
-- [ ] Push to GitHub.
-- [ ] Sync the changes.
-- [ ] Check submission on GitHub website.
