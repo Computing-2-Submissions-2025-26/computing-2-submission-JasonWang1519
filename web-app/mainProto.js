@@ -1,5 +1,5 @@
 /*jslint browser */
-import KingCrossing from "./KingCrossingProto.js?v=piece-cycle-3";
+import KingCrossing from "./KingCrossingProto.js?v=tutorial-pass-5";
 
 const piece_symbols = [
     "",
@@ -118,6 +118,24 @@ let tutorial_timer;
 let tutorial_animation_timer;
 let tutorial_animation_start = 0;
 let tutorial_pointer_down = undefined;
+let tutorial_click_suppressed_until = 0;
+
+const tutorial_ability_cycle = 6400;
+const tutorial_eagle_click_time = 1300;
+const tutorial_jump_click_time = 3000;
+const tutorial_move_click_time = 4700;
+const tutorial_place_cycle = 4200;
+const tutorial_knight_place_start_time = 0;
+const tutorial_place_click_time = 3000;
+const tutorial_king_move_cycle = 3600;
+const tutorial_king_move_click_time = 1150;
+const tutorial_bishop_cycle = 4300;
+const tutorial_bishop_click_time = 1800;
+const tutorial_queen_wrath_cycle = 5600;
+const tutorial_queen_wrath_click_time = 1400;
+const tutorial_queen_rook_click_time = 3300;
+const tutorial_queen_vision_cycle = 4600;
+const tutorial_queen_vision_click_time = 1500;
 
 el("title").textContent = "King's Crossing";
 el("home_player_type").textContent = player_types["1"];
@@ -228,18 +246,28 @@ tutorial_control_button.type = "button";
 tutorial_control_button.textContent = "Skip tutorial";
 document.body.append(tutorial_control_button);
 
+const tutorial_slide_number = document.createElement("div");
+tutorial_slide_number.id = "tutorial_slide_number";
+document.body.append(tutorial_slide_number);
+
 const tutorial_text = document.createElement("div");
 tutorial_text.id = "tutorial_text";
 tutorial_text.className = "hidden";
 document.body.append(tutorial_text);
+
+const tutorial_mouse = document.createElement("div");
+tutorial_mouse.id = "tutorial_mouse";
+tutorial_mouse.className = "hidden";
+tutorial_mouse.textContent = "➤";
+document.body.append(tutorial_mouse);
 
 const tutorial_rule_steps = Object.freeze([
     Object.freeze({
         "phase": "rule_place_piece",
         "focus": "top_row",
         "text": (
-            "Player 2 places one enemy on the top row. The cycle is pawn, " +
-            "knight, bishop, then pawn again."
+            "Player 2 chooses a top-row square. The knight preview follows " +
+            "the mouse, then the click locks it in place."
         )
     }),
     Object.freeze({
@@ -262,33 +290,40 @@ const tutorial_rule_steps = Object.freeze([
         "phase": "rule_bishop_capture",
         "focus": "enemy_attacks",
         "text": (
-            "If a bishop is undefended, the king can capture it by stepping " +
-            "onto the bishop's square."
+            "If a bishop is undefended, the king can click its square and " +
+            "capture it."
         )
     }),
     Object.freeze({
         "phase": "rule_bishop_defended",
         "focus": "enemy_attacks",
         "text": (
-            "Now Player 2 places a knight two up and one left from the bishop. " +
-            "That knight defends the bishop, so the king cannot capture it."
+            "If a knight defends the bishop, that same capture would leave " +
+            "the king in check."
         )
     }),
     Object.freeze({
         "phase": "rule_stage_goal",
         "focus": "stage_goal",
         "text": (
-            "Climb upward to scroll the board. Eagle Vision shows danger, " +
-            "and Royal Jump can leap two squares."
+            "Eagle Vision reveals danger. Royal Jump shows gold leap dots, " +
+            "then the king can jump to a safe square."
         )
     }),
     Object.freeze({
-        "phase": "rule_queen_phase",
+        "phase": "rule_queen_wrath",
         "focus": "queen_phase",
         "text": (
-            "When the queen meter fills, phase 2 begins. The queen moves in " +
-            "straight or diagonal lines, Queen's Wrath can add a safe rook, " +
-            "and the king wins by reaching the row beneath the royal guard."
+            "When the queen meter fills, the Grand Regent Queen begins. " +
+            "Queen's Wrath lets Player 2 place a safe rook."
+        )
+    }),
+    Object.freeze({
+        "phase": "rule_queen_goal",
+        "focus": "queen_goal",
+        "text": (
+            "Eagle Vision reveals queen and rook danger. The king wins by " +
+            "reaching the highlighted row below the royal guard."
         )
     })
 ]);
@@ -308,6 +343,44 @@ const square_colour_class = function (position) {
     }
 
     return "dark_square";
+};
+
+const tutorial_slide_number_for_phase = function () {
+    if (tutorial_phase === "title") {
+        return 1;
+    }
+
+    if (tutorial_phase === "duel_intro") {
+        return 2;
+    }
+
+    if (
+        tutorial_phase === "king_opening" ||
+        tutorial_phase === "player_one" ||
+        tutorial_phase === "pawn_chase"
+    ) {
+        return 3;
+    }
+
+    const rule_index = tutorial_rule_steps.findIndex(function (step) {
+        return step.phase === tutorial_phase;
+    });
+
+    if (rule_index >= 0) {
+        return rule_index + 4;
+    }
+
+    return "";
+};
+
+const update_tutorial_slide_number = function () {
+    if (!tutorial_active || tutorial_phase === "completed") {
+        tutorial_slide_number.classList.add("hidden");
+        return;
+    }
+
+    tutorial_slide_number.textContent = tutorial_slide_number_for_phase();
+    tutorial_slide_number.classList.remove("hidden");
 };
 
 const clear_all_timers = function () {
@@ -374,10 +447,13 @@ const hide_tutorial_layers = function () {
     tutorial_title_screen.classList.add("hidden");
     tutorial_duel_screen.classList.add("hidden");
     tutorial_text.classList.add("hidden");
+    tutorial_mouse.classList.add("hidden");
+    tutorial_slide_number.classList.add("hidden");
     document.body.classList.remove("tutorial_start_mode");
     document.body.classList.remove("tutorial_board_focus_mode");
     document.body.classList.remove("tutorial_focus_abilities");
     document.body.classList.remove("tutorial_focus_queen_meter");
+    document.body.classList.remove("tutorial_focus_queens_wrath");
     tutorial_focus = "none";
     tutorial_step_index = 0;
     clearInterval(tutorial_animation_timer);
@@ -387,10 +463,16 @@ const update_tutorial_focus_class = function () {
     document.body.classList.toggle(
         "tutorial_focus_abilities",
         tutorial_focus === "stage_goal" ||
-        tutorial_focus === "queen_phase"
+        tutorial_focus === "queen_phase" ||
+        tutorial_focus === "queen_goal"
     );
     document.body.classList.toggle(
         "tutorial_focus_queen_meter",
+        tutorial_focus === "queen_phase" ||
+        tutorial_focus === "queen_goal"
+    );
+    document.body.classList.toggle(
+        "tutorial_focus_queens_wrath",
         tutorial_focus === "queen_phase"
     );
 };
@@ -439,6 +521,7 @@ const start_tutorial_title = function () {
     tutorial_text.classList.add("hidden");
     document.body.classList.add("tutorial_start_mode");
     document.body.classList.remove("tutorial_board_focus_mode");
+    update_tutorial_slide_number();
 
     input_locked = true;
     redraw_board();
@@ -459,6 +542,7 @@ const start_tutorial_at_duel_intro = function () {
     tutorial_text.classList.add("hidden");
     document.body.classList.add("tutorial_start_mode");
     document.body.classList.remove("tutorial_board_focus_mode");
+    update_tutorial_slide_number();
 
     input_locked = true;
     redraw_board();
@@ -472,6 +556,7 @@ const start_tutorial_duel_intro = function () {
     tutorial_text.classList.add("hidden");
     document.body.classList.add("tutorial_start_mode");
     document.body.classList.remove("tutorial_board_focus_mode");
+    update_tutorial_slide_number();
 };
 
 const start_tutorial_king_opening = function () {
@@ -481,6 +566,7 @@ const start_tutorial_king_opening = function () {
     tutorial_text.classList.add("hidden");
     document.body.classList.remove("tutorial_start_mode");
     document.body.classList.remove("tutorial_board_focus_mode");
+    update_tutorial_slide_number();
 
     opening_active = true;
     opening_phase = "king";
@@ -511,6 +597,7 @@ const show_pawn_chase_spotlight = function () {
     );
     tutorial_text.classList.remove("hidden");
     document.body.classList.add("tutorial_board_focus_mode");
+    update_tutorial_slide_number();
 
     opening_phase = "pawns";
     opening_pawn_column = -1;
@@ -540,10 +627,19 @@ const show_current_tutorial_rule = function () {
     document.body.classList.remove("tutorial_start_mode");
     document.body.classList.add("tutorial_board_focus_mode");
     update_tutorial_focus_class();
+    update_tutorial_slide_number();
 
-    if (tutorial_phase === "rule_place_piece") {
+    if (
+        tutorial_phase === "rule_place_piece" ||
+        tutorial_phase === "rule_king_moves" ||
+        tutorial_phase === "rule_bishop_capture" ||
+        tutorial_phase === "rule_bishop_defended" ||
+        tutorial_phase === "rule_stage_goal" ||
+        tutorial_phase === "rule_queen_wrath" ||
+        tutorial_phase === "rule_queen_goal"
+    ) {
         tutorial_animation_start = Date.now();
-        tutorial_animation_timer = setInterval(redraw_board, 120);
+        tutorial_animation_timer = setInterval(redraw_board, 80);
     }
 
     input_locked = true;
@@ -573,6 +669,7 @@ const show_player_one_spotlight = function () {
     );
     tutorial_text.classList.remove("hidden");
     document.body.classList.add("tutorial_board_focus_mode");
+    update_tutorial_slide_number();
 
     redraw_board();
 };
@@ -613,6 +710,22 @@ const is_click_on_tutorial_control = function (event) {
         event.target === tutorial_control_button ||
         tutorial_control_button.contains(event.target)
     );
+};
+
+const suppress_tutorial_followup_click = function () {
+    tutorial_click_suppressed_until = Date.now() + 350;
+};
+
+const consume_tutorial_followup_click = function (event) {
+    if (Date.now() > tutorial_click_suppressed_until) {
+        return false;
+    }
+
+    tutorial_click_suppressed_until = 0;
+    event.preventDefault();
+    event.stopPropagation();
+
+    return true;
 };
 
 document.addEventListener("pointerdown", function (event) {
@@ -660,8 +773,14 @@ document.addEventListener("pointerup", function (event) {
     }
 
     event.preventDefault();
+    event.stopPropagation();
+    suppress_tutorial_followup_click();
     tutorial_click();
 });
+
+document.addEventListener("click", function (event) {
+    consume_tutorial_followup_click(event);
+}, true);
 
 tutorial_control_button.onclick = function (event) {
     event.preventDefault();
@@ -909,10 +1028,19 @@ const is_tutorial_danger_focus_square = function (position) {
     );
 };
 
+const is_tutorial_pawn_wall_danger_square = function (position) {
+    return (
+        tutorial_active &&
+        tutorial_focus === "danger_row" &&
+        position.row === 1
+    );
+};
+
 const is_tutorial_queen_goal_focus_square = function (position) {
     return (
         tutorial_active &&
-        tutorial_focus === "queen_phase" &&
+        tutorial_phase === "rule_queen_goal" &&
+        tutorial_queen_vision_revealed() &&
         position.row === game.height - 2
     );
 };
@@ -925,20 +1053,81 @@ const tutorial_knight_position = function () {
     return {"column": 1, "row": game.height - 1};
 };
 
-const tutorial_placing_knight_position = function () {
-    const elapsed = (Date.now() - tutorial_animation_start) % 4200;
-    const columns = (
-        elapsed < 900
-        ? [0, 1, 2]
-        : elapsed < 1900
-        ? [3, 4, 5, 6]
-        : elapsed < 2900
-        ? [5, 4, 3, 2]
-        : [1]
+const tutorial_placing_column = function (elapsed, start, end, columns) {
+    const progress = Math.min(Math.max((elapsed - start) / (end - start), 0), 1);
+    const index = Math.min(
+        Math.floor(progress * columns.length),
+        columns.length - 1
     );
-    const step = Math.floor(elapsed / 300) % columns.length;
 
-    return {"column": columns[step], "row": game.height - 1};
+    return columns[index];
+};
+
+const tutorial_placing_pawn_position = function () {
+    return undefined;
+};
+
+const tutorial_placing_knight_column = function () {
+    const elapsed = tutorial_place_elapsed();
+
+    if (elapsed < tutorial_knight_place_start_time) {
+        return undefined;
+    }
+
+    if (elapsed >= tutorial_place_click_time) {
+        return 2;
+    }
+
+    const travel = elapsed - tutorial_knight_place_start_time;
+    const first_leg = 1450;
+    const second_leg = tutorial_place_click_time - tutorial_knight_place_start_time - first_leg;
+
+    if (travel < first_leg) {
+        return 2 + 4 * (travel / first_leg);
+    }
+
+    return 6 - 4 * ((travel - first_leg) / second_leg);
+};
+
+const tutorial_placing_knight_position = function () {
+    const column = tutorial_placing_knight_column();
+
+    if (column === undefined) {
+        return undefined;
+    }
+
+    return {
+        "column": Math.round(Math.min(Math.max(column, 0), 7)),
+        "row": game.height - 1
+    };
+};
+
+const tutorial_place_elapsed = function () {
+    return (Date.now() - tutorial_animation_start) % tutorial_place_cycle;
+};
+
+const tutorial_king_move_elapsed = function () {
+    return (Date.now() - tutorial_animation_start) % tutorial_king_move_cycle;
+};
+
+const tutorial_king_move_target = function () {
+    return {"column": game.king.column, "row": game.king.row + 1};
+};
+
+const tutorial_king_move_position = function () {
+    if (tutorial_king_move_elapsed() < tutorial_king_move_click_time) {
+        return game.king;
+    }
+
+    return tutorial_king_move_target();
+};
+
+const tutorial_bishop_elapsed = function () {
+    return (Date.now() - tutorial_animation_start) % tutorial_bishop_cycle;
+};
+
+const tutorial_bishop_capture_used = function () {
+    return tutorial_bishop_elapsed() >= tutorial_bishop_click_time;
 };
 
 const tutorial_bishop_position = function () {
@@ -949,6 +1138,14 @@ const tutorial_capture_king_position = function () {
     return {"column": 2, "row": 5};
 };
 
+const tutorial_bishop_demo_king_position = function () {
+    if (tutorial_bishop_capture_used()) {
+        return tutorial_bishop_position();
+    }
+
+    return tutorial_capture_king_position();
+};
+
 const tutorial_queen_position = function () {
     return {"column": 4, "row": 6};
 };
@@ -957,12 +1154,66 @@ const tutorial_rook_position = function () {
     return {"column": 1, "row": 5};
 };
 
+const tutorial_queen_wrath_elapsed = function () {
+    return (Date.now() - tutorial_animation_start) % tutorial_queen_wrath_cycle;
+};
+
+const tutorial_queen_vision_elapsed = function () {
+    return (Date.now() - tutorial_animation_start) % tutorial_queen_vision_cycle;
+};
+
+const tutorial_queen_wrath_armed = function () {
+    return tutorial_queen_wrath_elapsed() >= tutorial_queen_wrath_click_time;
+};
+
+const tutorial_queen_rook_placed = function () {
+    return tutorial_queen_wrath_elapsed() >= tutorial_queen_rook_click_time;
+};
+
+const tutorial_queen_vision_revealed = function () {
+    return tutorial_queen_vision_elapsed() >= tutorial_queen_vision_click_time;
+};
+
 const tutorial_stage_bishop_position = function () {
     return {"column": game.king.column + 2, "row": 6};
 };
 
 const tutorial_stage_knight_position = function () {
     return {"column": game.king.column - 2, "row": 6};
+};
+
+const tutorial_stage_move_target = function () {
+    return {"column": game.king.column + 2, "row": game.king.row + 2};
+};
+
+const tutorial_stage_elapsed = function () {
+    return (Date.now() - tutorial_animation_start) % tutorial_ability_cycle;
+};
+
+const tutorial_stage_eagle_revealed = function () {
+    const elapsed = tutorial_stage_elapsed();
+
+    return (
+        elapsed >= tutorial_eagle_click_time &&
+        elapsed < tutorial_move_click_time
+    );
+};
+
+const tutorial_stage_jump_revealed = function () {
+    const elapsed = tutorial_stage_elapsed();
+
+    return (
+        elapsed >= tutorial_jump_click_time &&
+        elapsed < tutorial_move_click_time
+    );
+};
+
+const tutorial_stage_king_position = function () {
+    if (tutorial_stage_elapsed() < tutorial_move_click_time) {
+        return game.king;
+    }
+
+    return tutorial_stage_move_target();
 };
 
 const tutorial_positions_include = function (positions, position) {
@@ -990,9 +1241,7 @@ const tutorial_ray_squares = function (origin, directions) {
     }, []);
 };
 
-const tutorial_knight_attack_squares = function () {
-    const knight = tutorial_knight_position();
-
+const tutorial_knight_attacks_from = function (knight) {
     return [
         {"column": -2, "row": -1},
         {"column": -2, "row": 1},
@@ -1008,6 +1257,10 @@ const tutorial_knight_attack_squares = function () {
             "row": knight.row + offset.row
         };
     }).filter(is_inside_board);
+};
+
+const tutorial_knight_attack_squares = function () {
+    return tutorial_knight_attacks_from(tutorial_knight_position());
 };
 
 const tutorial_bishop_attack_squares = function () {
@@ -1055,15 +1308,18 @@ const tutorial_stage_attack_squares = function () {
         {"column": -1, "row": 1},
         {"column": 1, "row": -1},
         {"column": 1, "row": 1}
-    ]).concat([
-        {"column": game.king.column - 1, "row": 4},
-        {"column": game.king.column, "row": 5},
-        {"column": game.king.column + 1, "row": 4}
-    ]);
+    ]).concat(tutorial_knight_attacks_from(tutorial_stage_knight_position()));
 };
 
 const tutorial_demo_token_at = function (position) {
     if (!tutorial_active || tutorial_phase.indexOf("rule_") !== 0) {
+        return undefined;
+    }
+
+    if (
+        tutorial_phase === "rule_place_piece" &&
+        same_position(position, tutorial_placing_pawn_position())
+    ) {
         return undefined;
     }
 
@@ -1086,9 +1342,9 @@ const tutorial_demo_token_at = function (position) {
             tutorial_phase === "rule_bishop_capture" ||
             tutorial_phase === "rule_bishop_defended"
         ) &&
-        same_position(position, tutorial_bishop_position())
+        same_position(position, tutorial_bishop_demo_king_position())
     ) {
-        return 4;
+        return 1;
     }
 
     if (
@@ -1096,14 +1352,22 @@ const tutorial_demo_token_at = function (position) {
             tutorial_phase === "rule_bishop_capture" ||
             tutorial_phase === "rule_bishop_defended"
         ) &&
-        same_position(position, tutorial_capture_king_position())
+        !tutorial_bishop_capture_used() &&
+        same_position(position, tutorial_bishop_position())
+    ) {
+        return 4;
+    }
+
+    if (
+        tutorial_phase === "rule_king_moves" &&
+        same_position(position, tutorial_king_move_position())
     ) {
         return 1;
     }
 
     if (
         tutorial_phase === "rule_stage_goal" &&
-        same_position(position, game.king)
+        same_position(position, tutorial_stage_king_position())
     ) {
         return 1;
     }
@@ -1123,21 +1387,33 @@ const tutorial_demo_token_at = function (position) {
     }
 
     if (
-        tutorial_phase === "rule_queen_phase" &&
+        (
+            tutorial_phase === "rule_queen_wrath" ||
+            tutorial_phase === "rule_queen_goal"
+        ) &&
         same_position(position, tutorial_queen_position())
     ) {
         return 5;
     }
 
     if (
-        tutorial_phase === "rule_queen_phase" &&
+        (
+            (
+                tutorial_phase === "rule_queen_wrath" &&
+                tutorial_queen_rook_placed()
+            ) ||
+            tutorial_phase === "rule_queen_goal"
+        ) &&
         same_position(position, tutorial_rook_position())
     ) {
         return 7;
     }
 
     if (
-        tutorial_phase === "rule_queen_phase" &&
+        (
+            tutorial_phase === "rule_queen_wrath" ||
+            tutorial_phase === "rule_queen_goal"
+        ) &&
         position.row === game.height - 1
     ) {
         return 6;
@@ -1154,21 +1430,33 @@ const is_tutorial_placing_knight_square = function (position) {
     return (
         tutorial_active &&
         tutorial_phase === "rule_place_piece" &&
-        same_position(position, tutorial_placing_knight_position())
+        same_position(position, tutorial_placing_knight_position()) &&
+        tutorial_place_elapsed() < tutorial_place_click_time
     );
 };
 
 const is_tutorial_placed_knight_square = function (position) {
     return (
-        is_tutorial_placing_knight_square(position) &&
-        (Date.now() - tutorial_animation_start) % 4200 >= 2900
+        tutorial_active &&
+        tutorial_phase === "rule_place_piece" &&
+        same_position(position, tutorial_placing_knight_position()) &&
+        tutorial_place_elapsed() >= tutorial_place_click_time
     );
+};
+
+const is_tutorial_placing_pawn_square = function (position) {
+    return false;
+};
+
+const is_tutorial_placed_pawn_square = function (position) {
+    return false;
 };
 
 const is_tutorial_move_hint_square = function (position) {
     return (
         tutorial_active &&
         tutorial_phase === "rule_king_moves" &&
+        tutorial_king_move_elapsed() < tutorial_king_move_click_time &&
         Math.abs(position.column - game.king.column) <= 1 &&
         Math.abs(position.row - game.king.row) <= 1 &&
         !same_position(position, game.king) &&
@@ -1177,27 +1465,7 @@ const is_tutorial_move_hint_square = function (position) {
 };
 
 const is_tutorial_attack_square = function (position) {
-    if (
-        !tutorial_active ||
-        (
-            tutorial_phase !== "rule_bishop_capture" &&
-            tutorial_phase !== "rule_bishop_defended"
-        )
-    ) {
-        return false;
-    }
-
-    if (tutorial_phase === "rule_bishop_capture") {
-        return tutorial_positions_include(
-            tutorial_bishop_attack_squares(),
-            position
-        );
-    }
-
-    return tutorial_positions_include(
-        tutorial_bishop_attack_squares().concat(tutorial_knight_attack_squares()),
-        position
-    );
+    return false;
 };
 
 const is_tutorial_capture_square = function (position) {
@@ -1207,7 +1475,20 @@ const is_tutorial_capture_square = function (position) {
             tutorial_phase === "rule_bishop_capture" ||
             tutorial_phase === "rule_bishop_defended"
         ) &&
+        !tutorial_bishop_capture_used() &&
         same_position(position, tutorial_bishop_position())
+    );
+};
+
+const is_tutorial_self_check_square = function (position) {
+    return (
+        tutorial_active &&
+        tutorial_phase === "rule_bishop_defended" &&
+        tutorial_bishop_capture_used() &&
+        (
+            same_position(position, tutorial_bishop_position()) ||
+            same_position(position, tutorial_knight_position())
+        )
     );
 };
 
@@ -1223,7 +1504,11 @@ const is_tutorial_defense_square = function (position) {
 };
 
 const is_tutorial_queen_attack_square = function (position) {
-    if (!tutorial_active || tutorial_phase !== "rule_queen_phase") {
+    if (
+        !tutorial_active ||
+        tutorial_phase !== "rule_queen_goal" ||
+        !tutorial_queen_vision_revealed()
+    ) {
         return false;
     }
 
@@ -1245,26 +1530,28 @@ const is_tutorial_arrow_square = function (position) {
         return true;
     }
 
-    if (
-        tutorial_active &&
-        tutorial_phase === "rule_queen_phase" &&
-        tutorial_positions_include([
-            {"column": game.king.column, "row": 3},
-            {"column": game.king.column + 1, "row": 4},
-            {"column": game.king.column + 1, "row": 5},
-            {"column": game.king.column + 2, "row": 6}
-        ], position)
-    ) {
-        return true;
-    }
-
     return false;
+};
+
+const is_tutorial_stage_normal_move_square = function (position) {
+    return (
+        tutorial_active &&
+        tutorial_phase === "rule_stage_goal" &&
+        !tutorial_stage_jump_revealed() &&
+        tutorial_stage_elapsed() < tutorial_move_click_time &&
+        Math.abs(position.column - game.king.column) <= 1 &&
+        Math.abs(position.row - game.king.row) <= 1 &&
+        !same_position(position, game.king) &&
+        is_inside_board(position) &&
+        !KingCrossing.is_pawn_wall(game, position)
+    );
 };
 
 const is_tutorial_royal_jump_square = function (position) {
     return (
         tutorial_active &&
         tutorial_phase === "rule_stage_goal" &&
+        tutorial_stage_jump_revealed() &&
         Math.abs(position.column - game.king.column) <= 2 &&
         Math.abs(position.row - game.king.row) <= 2 &&
         !same_position(position, game.king) &&
@@ -1277,13 +1564,24 @@ const is_tutorial_eagle_vision_square = function (position) {
     return (
         tutorial_active &&
         tutorial_phase === "rule_stage_goal" &&
+        tutorial_stage_eagle_revealed() &&
         tutorial_positions_include(tutorial_stage_attack_squares(), position)
+    );
+};
+
+const is_tutorial_jump_target_square = function (position) {
+    return (
+        tutorial_active &&
+        tutorial_phase === "rule_stage_goal" &&
+        tutorial_stage_jump_revealed() &&
+        same_position(position, tutorial_stage_move_target())
     );
 };
 
 const is_tutorial_rule_square = function (position) {
     return (
         is_tutorial_move_hint_square(position) ||
+        is_tutorial_stage_normal_move_square(position) ||
         (
             tutorial_active &&
             tutorial_phase === "rule_place_piece" &&
@@ -1299,15 +1597,18 @@ const is_tutorial_focus_square = function (position) {
         is_tutorial_pawn_focus_square(position) ||
         is_tutorial_top_row_focus_square(position) ||
         is_tutorial_danger_focus_square(position) ||
+        is_tutorial_pawn_wall_danger_square(position) ||
         is_tutorial_queen_goal_focus_square(position) ||
         is_tutorial_rule_square(position) ||
         is_tutorial_attack_square(position) ||
         is_tutorial_capture_square(position) ||
+        is_tutorial_self_check_square(position) ||
         is_tutorial_queen_attack_square(position) ||
         is_tutorial_stage_goal_square(position) ||
         is_tutorial_arrow_square(position) ||
         is_tutorial_royal_jump_square(position) ||
         is_tutorial_eagle_vision_square(position) ||
+        is_tutorial_jump_target_square(position) ||
         is_tutorial_defense_square(position)
     );
 };
@@ -1579,9 +1880,20 @@ const visual_token_for_position = function (base_token, position) {
         tutorial_active &&
         (
             tutorial_phase === "rule_bishop_capture" ||
-            tutorial_phase === "rule_bishop_defended"
+            tutorial_phase === "rule_bishop_defended" ||
+            tutorial_phase === "rule_king_moves" ||
+            tutorial_phase === "rule_stage_goal"
         ) &&
         base_token === 1
+    ) {
+        return 0;
+    }
+
+    if (
+        tutorial_active &&
+        tutorial_phase === "rule_place_piece" &&
+        base_token === 3 &&
+        KingCrossing.is_pawn_wall(game, position)
     ) {
         return 0;
     }
@@ -1734,6 +2046,10 @@ const class_for_token = function (token, base_token, position) {
         classes.push("incoming_row_square");
     }
 
+    if (position.row === game.height - 1) {
+        classes.push("top_row_square");
+    }
+
     if (is_extra_bottom_row(position)) {
         classes.push("trailing_row_square");
     }
@@ -1765,7 +2081,10 @@ const class_for_token = function (token, base_token, position) {
         classes.push("tutorial_rule_square");
     }
 
-    if (is_tutorial_move_hint_square(position)) {
+    if (
+        is_tutorial_move_hint_square(position) ||
+        is_tutorial_stage_normal_move_square(position)
+    ) {
         classes.push("king_move_hint");
     }
 
@@ -1774,7 +2093,11 @@ const class_for_token = function (token, base_token, position) {
     }
 
     if (is_tutorial_queen_attack_square(position)) {
-        classes.push("tutorial_attack_square");
+        classes.push("tutorial_eagle_vision_square");
+    }
+
+    if (is_tutorial_pawn_wall_danger_square(position)) {
+        classes.push("tutorial_pawn_wall_danger_square");
     }
 
     if (is_tutorial_eagle_vision_square(position)) {
@@ -1783,6 +2106,10 @@ const class_for_token = function (token, base_token, position) {
 
     if (is_tutorial_capture_square(position)) {
         classes.push("tutorial_capture_square");
+    }
+
+    if (is_tutorial_self_check_square(position)) {
+        classes.push("tutorial_self_check_square");
     }
 
     if (is_tutorial_defense_square(position)) {
@@ -1797,6 +2124,10 @@ const class_for_token = function (token, base_token, position) {
         classes.push("tutorial_royal_jump_square");
     }
 
+    if (is_tutorial_jump_target_square(position)) {
+        classes.push("tutorial_jump_target_square");
+    }
+
     if (is_tutorial_demo_piece_square(position)) {
         classes.push("tutorial_demo_piece_square");
     }
@@ -1807,6 +2138,14 @@ const class_for_token = function (token, base_token, position) {
 
     if (is_tutorial_placed_knight_square(position)) {
         classes.push("tutorial_placed_knight_square");
+    }
+
+    if (is_tutorial_placing_pawn_square(position)) {
+        classes.push("tutorial_placing_piece_square");
+    }
+
+    if (is_tutorial_placed_pawn_square(position)) {
+        classes.push("tutorial_placed_piece_square");
     }
 
     if (is_royal_jump_range_square(position)) {
@@ -1938,6 +2277,418 @@ const next_piece_name = function () {
     }
 
     return "Bishop";
+};
+
+const rect_center = function (element) {
+    const rect = element.getBoundingClientRect();
+
+    return {
+        "x": rect.left + rect.width / 2,
+        "y": rect.top + rect.height / 2
+    };
+};
+
+const stage_cell = function (position) {
+    return document.querySelector(
+        `.board_cell[data-column="${position.column}"][data-row="${position.row}"]`
+    );
+};
+
+const blend_points = function (start, end, amount) {
+    return {
+        "x": start.x + (end.x - start.x) * amount,
+        "y": start.y + (end.y - start.y) * amount
+    };
+};
+
+const top_row_pointer_position = function (column) {
+    if (column === undefined) {
+        return undefined;
+    }
+
+    const left_column = Math.floor(Math.min(Math.max(column, 0), 7));
+    const right_column = Math.ceil(Math.min(Math.max(column, 0), 7));
+    const left_cell = stage_cell({
+        "column": left_column,
+        "row": game.height - 1
+    });
+    const right_cell = stage_cell({
+        "column": right_column,
+        "row": game.height - 1
+    });
+
+    if (left_cell === null || right_cell === null) {
+        return undefined;
+    }
+
+    return blend_points(
+        rect_center(left_cell),
+        rect_center(right_cell),
+        column - left_column
+    );
+};
+
+const stage_demo_pointer_position = function () {
+    const elapsed = tutorial_stage_elapsed();
+    const king_cell = stage_cell(game.king);
+    const target_cell = stage_cell(tutorial_stage_move_target());
+
+    if (king_cell === null || target_cell === null) {
+        return undefined;
+    }
+
+    const start = rect_center(king_cell);
+    const eagle = rect_center(eagle_vision_button);
+    const jump = rect_center(royal_jump_button);
+    const target = rect_center(target_cell);
+
+    if (elapsed < tutorial_eagle_click_time) {
+        return blend_points(start, eagle, elapsed / tutorial_eagle_click_time);
+    }
+
+    if (elapsed < tutorial_jump_click_time) {
+        return blend_points(
+            eagle,
+            jump,
+            (elapsed - tutorial_eagle_click_time) /
+                (tutorial_jump_click_time - tutorial_eagle_click_time)
+        );
+    }
+
+    if (elapsed < tutorial_move_click_time) {
+        return blend_points(
+            jump,
+            target,
+            (elapsed - tutorial_jump_click_time) /
+                (tutorial_move_click_time - tutorial_jump_click_time)
+        );
+    }
+
+    return target;
+};
+
+const placement_demo_pointer_position = function () {
+    const elapsed = tutorial_place_elapsed();
+    const top_row_position = top_row_pointer_position(
+        tutorial_placing_knight_column()
+    );
+    const center_cell = stage_cell({"column": 4, "row": 5});
+
+    if (top_row_position === undefined || center_cell === null) {
+        return undefined;
+    }
+
+    const center = rect_center(center_cell);
+
+    if (elapsed < tutorial_place_click_time) {
+        return top_row_position;
+    }
+
+    return blend_points(
+        top_row_position,
+        center,
+        Math.min((elapsed - tutorial_place_click_time) / 850, 1)
+    );
+};
+
+const king_move_demo_pointer_position = function () {
+    const elapsed = tutorial_king_move_elapsed();
+    const king_cell = stage_cell(game.king);
+    const target_cell = stage_cell(tutorial_king_move_target());
+
+    if (king_cell === null || target_cell === null) {
+        return undefined;
+    }
+
+    const start = rect_center(king_cell);
+    const target = rect_center(target_cell);
+
+    if (elapsed < tutorial_king_move_click_time) {
+        return blend_points(start, target, elapsed / tutorial_king_move_click_time);
+    }
+
+    return target;
+};
+
+const bishop_demo_pointer_position = function () {
+    const elapsed = tutorial_bishop_elapsed();
+    const king_cell = stage_cell(tutorial_capture_king_position());
+    const bishop_cell = stage_cell(tutorial_bishop_position());
+    const center_cell = stage_cell({"column": 4, "row": 5});
+
+    if (king_cell === null || bishop_cell === null || center_cell === null) {
+        return undefined;
+    }
+
+    const start = rect_center(king_cell);
+    const target = rect_center(bishop_cell);
+    const center = rect_center(center_cell);
+
+    if (elapsed < tutorial_bishop_click_time) {
+        return blend_points(start, target, elapsed / tutorial_bishop_click_time);
+    }
+
+    return blend_points(
+        target,
+        center,
+        Math.min((elapsed - tutorial_bishop_click_time) / 850, 1)
+    );
+};
+
+const queen_wrath_demo_pointer_position = function () {
+    const elapsed = tutorial_queen_wrath_elapsed();
+    const queen_cell = stage_cell(tutorial_queen_position());
+    const rook_cell = stage_cell(tutorial_rook_position());
+
+    if (queen_cell === null || rook_cell === null) {
+        return undefined;
+    }
+
+    const start = rect_center(queen_cell);
+    const wrath = rect_center(queens_wrath_button);
+    const rook = rect_center(rook_cell);
+
+    if (elapsed < tutorial_queen_wrath_click_time) {
+        return blend_points(start, wrath, elapsed / tutorial_queen_wrath_click_time);
+    }
+
+    if (elapsed < tutorial_queen_rook_click_time) {
+        return blend_points(
+            wrath,
+            rook,
+            (elapsed - tutorial_queen_wrath_click_time) /
+                (tutorial_queen_rook_click_time - tutorial_queen_wrath_click_time)
+        );
+    }
+
+    return rook;
+};
+
+const queen_goal_demo_pointer_position = function () {
+    const elapsed = tutorial_queen_vision_elapsed();
+    const king_cell = stage_cell(game.king);
+
+    if (king_cell === null) {
+        return undefined;
+    }
+
+    const start = rect_center(king_cell);
+    const eagle = rect_center(eagle_vision_button);
+
+    if (elapsed < tutorial_queen_vision_click_time) {
+        return blend_points(start, eagle, elapsed / tutorial_queen_vision_click_time);
+    }
+
+    return eagle;
+};
+
+const is_tutorial_click_pulse = function (time) {
+    const elapsed = tutorial_stage_elapsed();
+
+    return elapsed >= time && elapsed < time + 240;
+};
+
+const is_tutorial_place_click_pulse = function () {
+    const elapsed = tutorial_place_elapsed();
+
+    return (
+        elapsed >= tutorial_place_click_time &&
+        elapsed < tutorial_place_click_time + 260
+    );
+};
+
+const is_tutorial_knight_click_pulse = function () {
+    const elapsed = tutorial_place_elapsed();
+
+    return (
+        elapsed >= tutorial_place_click_time &&
+        elapsed < tutorial_place_click_time + 260
+    );
+};
+
+const is_tutorial_king_move_click_pulse = function () {
+    const elapsed = tutorial_king_move_elapsed();
+
+    return (
+        elapsed >= tutorial_king_move_click_time &&
+        elapsed < tutorial_king_move_click_time + 260
+    );
+};
+
+const is_tutorial_bishop_click_pulse = function () {
+    const elapsed = tutorial_bishop_elapsed();
+
+    return (
+        elapsed >= tutorial_bishop_click_time &&
+        elapsed < tutorial_bishop_click_time + 260
+    );
+};
+
+const is_tutorial_queen_wrath_click_pulse = function () {
+    const elapsed = tutorial_queen_wrath_elapsed();
+
+    return (
+        (
+            elapsed >= tutorial_queen_wrath_click_time &&
+            elapsed < tutorial_queen_wrath_click_time + 260
+        ) ||
+        (
+            elapsed >= tutorial_queen_rook_click_time &&
+            elapsed < tutorial_queen_rook_click_time + 260
+        )
+    );
+};
+
+const is_tutorial_queen_vision_click_pulse = function () {
+    const elapsed = tutorial_queen_vision_elapsed();
+
+    return (
+        elapsed >= tutorial_queen_vision_click_time &&
+        elapsed < tutorial_queen_vision_click_time + 260
+    );
+};
+
+const update_tutorial_mouse = function () {
+    if (
+        !tutorial_active ||
+        (
+            tutorial_phase !== "rule_place_piece" &&
+            tutorial_phase !== "rule_king_moves" &&
+            tutorial_phase !== "rule_bishop_capture" &&
+            tutorial_phase !== "rule_bishop_defended" &&
+            tutorial_phase !== "rule_stage_goal" &&
+            tutorial_phase !== "rule_queen_wrath" &&
+            tutorial_phase !== "rule_queen_goal"
+        )
+    ) {
+        tutorial_mouse.classList.add("hidden");
+        return;
+    }
+
+    const position = (
+        tutorial_phase === "rule_place_piece"
+        ? placement_demo_pointer_position()
+        : tutorial_phase === "rule_king_moves"
+        ? king_move_demo_pointer_position()
+        : (
+            tutorial_phase === "rule_bishop_capture" ||
+            tutorial_phase === "rule_bishop_defended"
+        )
+        ? bishop_demo_pointer_position()
+        : tutorial_phase === "rule_queen_wrath"
+        ? queen_wrath_demo_pointer_position()
+        : tutorial_phase === "rule_queen_goal"
+        ? queen_goal_demo_pointer_position()
+        : stage_demo_pointer_position()
+    );
+
+    if (position === undefined) {
+        tutorial_mouse.classList.add("hidden");
+        return;
+    }
+
+    tutorial_mouse.classList.remove("hidden");
+    tutorial_mouse.classList.toggle(
+        "tutorial_mouse_clicking",
+        (
+            tutorial_phase === "rule_place_piece" &&
+            is_tutorial_place_click_pulse()
+        ) ||
+            (
+                tutorial_phase === "rule_king_moves" &&
+                is_tutorial_king_move_click_pulse()
+            ) ||
+            (
+                (
+                    tutorial_phase === "rule_bishop_capture" ||
+                    tutorial_phase === "rule_bishop_defended"
+                ) &&
+                is_tutorial_bishop_click_pulse()
+            ) ||
+            (
+                tutorial_phase === "rule_queen_wrath" &&
+                is_tutorial_queen_wrath_click_pulse()
+            ) ||
+            (
+                tutorial_phase === "rule_queen_goal" &&
+                is_tutorial_queen_vision_click_pulse()
+            ) ||
+            (
+                tutorial_phase === "rule_stage_goal" &&
+                (
+                    is_tutorial_click_pulse(tutorial_eagle_click_time) ||
+                    is_tutorial_click_pulse(tutorial_jump_click_time) ||
+                    is_tutorial_click_pulse(tutorial_move_click_time)
+                )
+            )
+    );
+    tutorial_mouse.style.left = `${position.x}px`;
+    tutorial_mouse.style.top = `${position.y}px`;
+};
+
+const update_tutorial_ability_demo = function () {
+    const stage_active = tutorial_active && tutorial_phase === "rule_stage_goal";
+    const queen_wrath_active = (
+        tutorial_active && tutorial_phase === "rule_queen_wrath"
+    );
+    const queen_goal_active = (
+        tutorial_active && tutorial_phase === "rule_queen_goal"
+    );
+
+    eagle_vision_button.classList.toggle(
+        "tutorial_ability_clicked",
+        (
+            stage_active &&
+            is_tutorial_click_pulse(tutorial_eagle_click_time)
+        ) ||
+            (
+                queen_goal_active &&
+                is_tutorial_queen_vision_click_pulse()
+            )
+    );
+    royal_jump_button.classList.toggle(
+        "tutorial_ability_clicked",
+        stage_active && is_tutorial_click_pulse(tutorial_jump_click_time)
+    );
+    queens_wrath_button.classList.toggle(
+        "tutorial_ability_clicked",
+        queen_wrath_active && is_tutorial_queen_wrath_click_pulse()
+    );
+
+    if (!stage_active && !queen_wrath_active && !queen_goal_active) {
+        update_tutorial_mouse();
+        return;
+    }
+
+    if (stage_active && tutorial_stage_eagle_revealed()) {
+        el("eagle_vision_status").textContent = "Active";
+        el("eagle_vision_fill").style.width = "100%";
+    }
+
+    if (stage_active && tutorial_stage_jump_revealed()) {
+        el("royal_jump_status").textContent = "Active";
+        el("royal_jump_fill").style.width = "100%";
+    }
+
+    if (queen_wrath_active || queen_goal_active) {
+        el("queen_progress_status").textContent = "Queen Active";
+        el("queen_progress_fill").style.width = "100%";
+    }
+
+    if (queen_wrath_active) {
+        el("queens_wrath_status").textContent = (
+            tutorial_queen_wrath_armed()
+            ? "Choose a square"
+            : "Spawn rook"
+        );
+    }
+
+    if (queen_goal_active && tutorial_queen_vision_revealed()) {
+        el("eagle_vision_status").textContent = "Active";
+        el("eagle_vision_fill").style.width = "100%";
+    }
+
+    update_tutorial_mouse();
 };
 
 const update_turn_panels = function () {
@@ -2118,7 +2869,11 @@ const slot_cells = range(0, game.width).map(function (column_index) {
         redraw_board();
     };
 
-    column_div.onclick = function () {
+    column_div.onclick = function (event) {
+        if (consume_tutorial_followup_click(event)) {
+            return;
+        }
+
         if (input_locked || !is_player_two_piece_turn()) {
             return;
         }
@@ -2223,6 +2978,10 @@ const attach_cell_handlers = function () {
             };
 
             cell.onclick = function (event) {
+                if (consume_tutorial_followup_click(event)) {
+                    return;
+                }
+
                 if (is_player_one_turn() && is_king_move_hint_square(position)) {
                     event.stopPropagation();
                     move_king_to_position(position);
@@ -2416,6 +3175,8 @@ const redraw_board = function () {
 
             cell.textContent = piece_symbols[token];
             cell.className = class_for_token(token, base_token, position);
+            cell.dataset.column = String(position.column);
+            cell.dataset.row = String(position.row);
             cell.setAttribute(
                 "aria-label",
                 alt_for_token(token, base_token, position)
@@ -2493,6 +3254,7 @@ const redraw_board = function () {
     update_royal_jump_button();
     update_queens_wrath_button();
     update_queen_progress();
+    update_tutorial_ability_demo();
     show_result_if_needed();
     start_royal_guard_arrival_if_needed();
     start_queen_arrival_if_needed();

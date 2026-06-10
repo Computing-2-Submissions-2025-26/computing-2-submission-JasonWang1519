@@ -8,13 +8,16 @@
     --result-width: 500px;
     --sidebar-width: 250px;
 
-    --banner-background: #1f1f1f;
-    --banner-colour: #f3d36b;
-    --border-colour: #e9edcc;
-    --result-background: #1f1f1fde;
-    --sidebar-background: #262421;
-    --sidebar-colour: #f7efe2;
-    --main-background: #312e2b;
+    --banner-background: #262522;
+    --banner-colour: #ffffff;
+    --border-colour: #3c3b38;
+    --result-background: #262522ef;
+    --sidebar-background: #262522;
+    --sidebar-colour: #ffffff;
+    --main-background: #1f1e1b;
+    --button-green: #81b64c;
+    --button-green-hover: #95c95a;
+    --button-green-shadow: #5f8f35;
 
     --light-square: #eeeed2;
     --dark-square: #769656;
@@ -49,7 +52,7 @@ body
 
 header
 {
-    background: linear-gradient(#262421, #1f1f1f);
+    background: var(--banner-background);
     border-bottom: var(--border-width) solid var(--border-colour);
     height: var(--banner-height);
     position: absolute;
@@ -74,7 +77,7 @@ header a
     font-size: var(--banner-font-size);
     font-variant: small-caps;
     font-weight: bold;
-    letter-spacing: 7px;
+    letter-spacing: 0;
     margin: 0;
     position: relative;
     text-align: center;
@@ -85,7 +88,7 @@ header a
 main
 {
     align-items: flex-start;
-    background: radial-gradient(circle, #3d3a35 0%, #262421 100%);
+    background: var(--main-background);
     display: flex;
     height: calc(100% - var(--banner-height));
     justify-content: center;
@@ -99,7 +102,7 @@ main
 #game_board
 {
     aspect-ratio: 8 / 11;
-    box-shadow: 0 0 30px black;
+    box-shadow: 0 0 34px #000000;
     height: calc(96% * 11 / 9);
     line-height: normal;
     max-height: none;
@@ -341,15 +344,9 @@ main
     filter: none;
 }
 
-#game_board:hover .column:hover .empty_square,
-#game_board .column:focus .empty_square
-{
-    filter: brightness(1.2);
-}
-
 aside
 {
-    background: linear-gradient(#191d27, #11141c);
+    background: var(--sidebar-background);
     color: var(--sidebar-colour);
     height: calc(100% - var(--banner-height));
     padding-left: 0.5em;
@@ -445,16 +442,31 @@ aside.active_turn
 #instructions_button,
 #eagle_vision_button,
 #royal_jump_button,
-#queens_wrath_button,
-#queen_progress_panel
+#queens_wrath_button
 {
-    background: var(--sidebar-background);
-    border: 2px solid var(--border-colour);
-    color: var(--banner-colour);
+    background: var(--button-green);
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 0 var(--button-green-shadow);
+    color: #ffffff;
     font-family: Georgia, "Times New Roman", serif;
     font-size: 13pt;
     font-weight: bold;
     padding: 0.55em 0.8em;
+    position: fixed;
+    z-index: 5;
+}
+
+#queen_progress_panel
+{
+    background: #262522;
+    border: 1px solid #5a5a56;
+    border-radius: 10px;
+    color: #ffffff;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 13pt;
+    font-weight: bold;
+    padding: 0.65em 0.85em;
     position: fixed;
     z-index: 5;
 }
@@ -506,7 +518,8 @@ aside.active_turn
 #royal_jump_button:hover,
 #queens_wrath_button:hover
 {
-    filter: brightness(1.2);
+    background: var(--button-green-hover);
+    filter: none;
 }
 
 #eagle_vision_button:disabled,
@@ -820,18 +833,19 @@ aside.active_turn
 
 .tutorial_text
 {
-    background: #262421ee;
-    border: 2px solid var(--border-colour);
+    background: #262522f2;
+    border: 1px solid #5a5a56;
+    border-radius: 14px;
     box-shadow: 0 0 22px #000000cc;
-    color: var(--banner-colour);
+    color: #ffffff;
     font-family: Georgia, "Times New Roman", serif;
-    font-size: 16pt;
+    font-size: 17pt;
     font-weight: bold;
     left: 18px;
     line-height: 1.25;
     max-height: 46vh;
     overflow: hidden;
-    padding: 0.85em 0.95em 1.9em;
+    padding: 1em 1.05em 2em;
     pointer-events: none;
     position: fixed;
     text-align: left;
@@ -839,7 +853,7 @@ aside.active_turn
     top: 260px;
     transform: none;
     transition: opacity 500ms ease;
-    width: 300px;
+    width: 340px;
     z-index: 1600;
 }
 
@@ -943,6 +957,26 @@ aside.active_turn
     width: max-content;
 }
 
+#tutorial_slide_number
+{
+    background: #262522ee;
+    border: 1px solid #5a5a56;
+    border-radius: 8px;
+    color: #ffffff;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 14pt;
+    font-weight: bold;
+    height: 34px;
+    left: 18px;
+    line-height: 30px;
+    position: fixed;
+    text-align: center;
+    text-shadow: 0 0 8px #000000;
+    top: 18px;
+    width: 34px;
+    z-index: 2600;
+}
+
 #tutorial_duel_heading
 {
     color: var(--banner-colour);
@@ -983,7 +1017,7 @@ aside.active_turn
 .tutorial_black_pieces
 {
     color: #111111;
-    font-size: 50pt;
+    font-size: 90pt;
     letter-spacing: 0.08em;
     line-height: 1;
     text-shadow: 0 1px 0 #ffffff99;
@@ -999,10 +1033,12 @@ aside.active_turn
 
 #tutorial_control_button
 {
-    background: var(--sidebar-background);
-    border: 2px solid var(--border-colour);
+    background: var(--button-green);
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 0 var(--button-green-shadow);
     bottom: 74px;
-    color: var(--banner-colour);
+    color: #ffffff;
     cursor: pointer;
     font-family: Georgia, "Times New Roman", serif;
     font-size: 13pt;
@@ -1016,39 +1052,41 @@ aside.active_turn
 
 #tutorial_control_button:hover
 {
-    filter: brightness(1.2);
+    background: var(--button-green-hover);
+    filter: none;
 }
 
 .tutorial_start_mode #tutorial_control_button
 {
     bottom: auto;
-    left: 28px;
+    left: 18px;
     right: auto;
-    top: 28px;
+    top: 64px;
     transform: none;
 }
 
 #tutorial_text
 {
-    background: #262421ee;
-    border: 2px solid var(--border-colour);
+    background: #262522f2;
+    border: 1px solid #5a5a56;
+    border-radius: 14px;
     box-shadow: 0 0 22px #000000cc;
-    color: var(--banner-colour);
+    color: #ffffff;
     font-family: Georgia, "Times New Roman", serif;
-    font-size: 16pt;
+    font-size: 17pt;
     font-weight: bold;
     left: 18px;
     line-height: 1.25;
     max-height: 46vh;
     overflow: hidden;
-    padding: 0.85em 0.95em 1.9em;
+    padding: 1em 1.05em 2em;
     pointer-events: none;
     position: fixed;
     text-align: left;
     text-shadow: 0 0 14px #000000;
     top: 260px;
     transform: none;
-    width: 300px;
+    width: 340px;
     z-index: 1600;
 }
 
@@ -1101,6 +1139,13 @@ aside.active_turn
     box-shadow: 0 0 18px #ff3b3b inset;
 }
 
+.tutorial_pawn_wall_danger_square
+{
+    box-shadow:
+        0 0 0 4px #ffffff inset,
+        0 0 16px #ffffff99;
+}
+
 .tutorial_capture_square
 {
     background: radial-gradient(circle, #f3d36b 0%, #8a6b1f 100%);
@@ -1114,6 +1159,14 @@ aside.active_turn
         0 0 20px #88b7de;
 }
 
+.tutorial_self_check_square
+{
+    background: radial-gradient(circle, #e14d42 0%, #8e2b23 100%);
+    box-shadow:
+        0 0 0 4px #f3d36b inset,
+        0 0 22px #ff3b3b;
+}
+
 .tutorial_demo_piece_square
 {
     text-shadow:
@@ -1121,30 +1174,22 @@ aside.active_turn
         0 2px 0 #000000;
 }
 
-.tutorial_placing_knight_square
+.tutorial_placing_knight_square,
+.tutorial_placing_piece_square
 {
     opacity: 0.55;
     z-index: 60 !important;
 }
 
-.tutorial_placed_knight_square
+.tutorial_placed_knight_square,
+.tutorial_placed_piece_square
 {
     opacity: 1;
 }
 
 .tutorial_placing_knight_square::after
 {
-    animation: tutorial_click_flash 4.2s ease-in-out infinite;
-    color: var(--banner-colour);
-    content: "click";
-    font-size: 10pt;
-    font-weight: bold;
-    left: 50%;
-    opacity: 0;
-    position: absolute;
-    text-shadow: 0 0 8px #000000;
-    top: 72%;
-    transform: translateX(-50%);
+    content: none;
 }
 
 .tutorial_arrow_square::after
@@ -1182,12 +1227,61 @@ aside.active_turn
     z-index: 2;
 }
 
+.tutorial_jump_target_square
+{
+    animation: tutorial_landing_pulse 1.1s ease-in-out infinite;
+}
+
 .tutorial_eagle_vision_square
 {
     background: radial-gradient(circle, #6fb0d8 0%, #315f78 100%);
     box-shadow:
         0 0 0 4px #b9e0f4 inset,
         0 0 18px #88b7de;
+}
+
+#tutorial_mouse
+{
+    color: #f7efe2;
+    filter: drop-shadow(0 3px 4px #000000);
+    font-family: Arial, sans-serif;
+    font-size: 26pt;
+    left: 0;
+    pointer-events: none;
+    position: fixed;
+    text-shadow:
+        -1px -1px 0 #111111,
+        1px -1px 0 #111111,
+        -1px 1px 0 #111111,
+        1px 1px 0 #111111;
+    top: 0;
+    transform: translate(-15%, -10%) rotate(-24deg);
+    transition: transform 120ms ease;
+    z-index: 2500;
+}
+
+#tutorial_mouse.tutorial_mouse_clicking
+{
+    transform: translate(-15%, -10%) rotate(-24deg) scale(0.82);
+}
+
+#tutorial_mouse.tutorial_mouse_clicking::after
+{
+    color: var(--banner-colour);
+    content: "click";
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 11pt;
+    font-weight: bold;
+    left: 28px;
+    position: absolute;
+    text-shadow: 0 0 8px #000000;
+    top: 22px;
+    transform: rotate(24deg);
+}
+
+.tutorial_ability_clicked
+{
+    animation: tutorial_button_click 240ms ease-out;
 }
 
 @keyframes tutorial_click_flash
@@ -1210,6 +1304,45 @@ aside.active_turn
     }
 }
 
+@keyframes tutorial_button_click
+{
+    0%
+    {
+        filter: brightness(1.45);
+        transform: scale(1);
+    }
+
+    50%
+    {
+        filter: brightness(1.75);
+        transform: scale(0.96);
+    }
+
+    100%
+    {
+        filter: brightness(1.2);
+        transform: scale(1);
+    }
+}
+
+@keyframes tutorial_landing_pulse
+{
+    0%,
+    100%
+    {
+        box-shadow:
+            0 0 0 4px var(--banner-colour) inset,
+            0 0 18px var(--banner-colour);
+    }
+
+    50%
+    {
+        box-shadow:
+            0 0 0 6px #fff5cc inset,
+            0 0 26px #fff5cc;
+    }
+}
+
 @media (max-width: 900px)
 {
     #tutorial_text,
@@ -1227,7 +1360,7 @@ aside.active_turn
 
 body.tutorial_focus_abilities #eagle_vision_button,
 body.tutorial_focus_abilities #royal_jump_button,
-body.tutorial_focus_abilities #queens_wrath_button,
+body.tutorial_focus_queens_wrath #queens_wrath_button,
 body.tutorial_focus_queen_meter #queen_progress_panel
 {
     box-shadow:
