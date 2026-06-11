@@ -790,6 +790,7 @@ const update_player_names_for_mode = function () {
 const restart_match = function () {
     update_player_names_for_mode();
     reset_game_state();
+    update_player_names_for_mode();
     tutorial_active = false;
     tutorial_phase = "completed";
     tutorial_focus = "none";
@@ -3491,6 +3492,8 @@ const start_queen_arrival_if_needed = function () {
 };
 
 const redraw_board = function () {
+    update_player_names_for_mode();
+
     document.body.classList.toggle(
         "tutorial_board_focus_mode",
         tutorial_active && tutorial_focus !== "none"
