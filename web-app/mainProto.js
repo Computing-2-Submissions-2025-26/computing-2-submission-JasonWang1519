@@ -1,5 +1,5 @@
 /*jslint browser */
-import KingCrossing from "./KingCrossingProto.js?v=tutorial-pass-5";
+import KingCrossing from "./KingCrossingProto.js?v=selector-controls-2";
 
 const piece_symbols = [
     "",
@@ -14,18 +14,18 @@ const piece_symbols = [
 
 const piece_labels = [
     "Empty square",
-    "Escaping king",
-    "Enemy knight",
+    "White king",
+    "Black knight",
     "Pursuing pawn wall",
-    "Enemy bishop",
+    "Black bishop",
     "Grand Regent Queen",
     "Royal guard pawn",
     "Queen's Wrath rook"
 ];
 
 const player_types = {
-    "1": "Escaping King",
-    "2": "Enemy Court"
+    "1": "White Pieces",
+    "2": "Black Pieces"
 };
 
 const visual_extra_top_rows = 1;
@@ -106,9 +106,13 @@ let royal_jump_active = false;
 let royal_jump_charge = royal_jump_max_charge;
 
 let queens_wrath_active = false;
+let queens_wrath_revealed = false;
 
 let hovered_column = undefined;
 let hovered_position = undefined;
+
+let queen_notice_state = "hidden";
+let queen_notice_timer;
 
 let tutorial_active = true;
 let tutorial_phase = "title";
@@ -141,13 +145,19 @@ el("title").textContent = "King's Crossing";
 el("home_player_type").textContent = player_types["1"];
 el("away_player_type").textContent = player_types["2"];
 el("home_ready").textContent = "The king enters the crossing...";
-el("away_ready").textContent = "The enemy court waits.";
+el("away_ready").textContent = "Black is waiting.";
 
 const instructions_button = document.createElement("button");
 instructions_button.id = "instructions_button";
 instructions_button.type = "button";
 instructions_button.textContent = "Instructions";
 document.body.append(instructions_button);
+
+const single_player_button = document.createElement("button");
+single_player_button.id = "single_player_button";
+single_player_button.type = "button";
+single_player_button.textContent = "Single Player";
+document.body.append(single_player_button);
 
 const eagle_vision_button = document.createElement("button");
 eagle_vision_button.id = "eagle_vision_button";
@@ -193,21 +203,31 @@ queen_progress_panel.innerHTML = `
 `;
 document.body.append(queen_progress_panel);
 
+const queen_notice = document.createElement("div");
+queen_notice.id = "queen_notice";
+queen_notice.className = "hidden";
+queen_notice.innerHTML = `
+    <span id="queen_notice_icon">♛</span>
+    <span id="queen_notice_text">
+        Grand Regent Queen will arrive in 12 moves
+    </span>
+`;
+document.body.append(queen_notice);
+
 const instructions_dialog = document.createElement("dialog");
 instructions_dialog.id = "instructions_dialog";
 instructions_dialog.innerHTML = `
     <section id="instructions_card">
         <h2>How to Play</h2>
-        <p><strong>Player 1:</strong> guide the king across the board.</p>
-        <p><strong>Player 2:</strong> place the next enemy piece on the top row.</p>
-        <p>If the top row is completely sealed, <strong>Player 2 wins</strong>.</p>
-        <p>Move the king with <strong>Q W E</strong> to go forward, <strong>A D</strong> to dodge sideways, and <strong>S</strong> to move backwards.</p>
-        <p><strong>Eagle Vision:</strong> reveal dangerous squares until the king's next move.</p>
-        <p><strong>Royal Jump:</strong> when charged, the king can move up to two squares.</p>
-        <p>Gold dots show movement range, not guaranteed safety.</p>
-        <p>When the queen meter fills, Player 2 summons the royal guard and the Grand Regent Queen.</p>
-        <p><strong>Queen's Wrath:</strong> in the final duel, Player 2 can place a rook on an empty square that does not immediately check the king.</p>
-        <p>The king cannot capture the queen directly. Reach the row beneath the white royal guard to win.</p>
+        <p><strong>White Pieces:</strong> guide the king upward and look for a clear route through the crossing.</p>
+        <p><strong>Black Pieces:</strong> choose where new threats appear on the top row and try to close the route.</p>
+        <p>You can play with the mouse by clicking a legal square.</p>
+        <p>You can also play with the keyboard like a remote: move the selector, then press <strong>Space</strong> to confirm.</p>
+        <p>White uses <strong>W A S D</strong> to choose the king's square. Black uses the <strong>Left</strong> and <strong>Right</strong> arrows when placing a new piece.</p>
+        <p>In the queen duel, Black presses <strong>Tab</strong> to switch between the queen and Queen's Wrath, uses the arrow keys to choose a legal square, then presses <strong>Space</strong>.</p>
+        <p><strong>Eagle Vision</strong> reveals danger. <strong>Royal Jump</strong> gives the king a longer leap when it is charged.</p>
+        <p>The queen counter appears after Black's first move. When it fills, the Grand Regent Queen arrives.</p>
+        <p>White wins by reaching the row beneath the royal guard. Black wins by trapping the king or sealing the crossing.</p>
         <p class="click_hint">Click anywhere to close.</p>
     </section>
 `;
@@ -266,64 +286,62 @@ const tutorial_rule_steps = Object.freeze([
         "phase": "rule_place_piece",
         "focus": "top_row",
         "text": (
-            "Player 2 chooses a top-row square. The knight preview follows " +
-            "the mouse, then the click locks it in place."
+            "Black chooses a top-row square for each new piece. Use the " +
+            "mouse, or move with the arrow keys and press Space."
         )
     }),
     Object.freeze({
         "phase": "rule_king_moves",
         "focus": "king",
         "text": (
-            "Player 1 moves the king with Q, W, E, A, S, and D. The king " +
-            "can step to any nearby dot."
+            "White guides the king upward. Click a dot, or use W, A, S, D " +
+            "to choose a square and press Space."
         )
     }),
     Object.freeze({
         "phase": "rule_pawn_wall",
         "focus": "danger_row",
         "text": (
-            "The pawn wall chases from below. The pawn row and the row above " +
-            "it are unsafe."
+            "The pawn wall keeps climbing. Stay off the wall and the row just " +
+            "above it."
         )
     }),
     Object.freeze({
         "phase": "rule_bishop_capture",
         "focus": "enemy_attacks",
         "text": (
-            "If a bishop is undefended, the king can click its square and " +
-            "capture it."
+            "The king can capture a black piece when it is left undefended."
         )
     }),
     Object.freeze({
         "phase": "rule_bishop_defended",
         "focus": "enemy_attacks",
         "text": (
-            "If a knight defends the bishop, that same capture would leave " +
-            "the king in check."
+            "If another black piece protects it, that capture is no longer safe."
         )
     }),
     Object.freeze({
         "phase": "rule_stage_goal",
         "focus": "stage_goal",
         "text": (
-            "Eagle Vision reveals danger. Royal Jump shows gold leap dots, " +
-            "then the king can jump to a safe square."
+            "Eagle Vision reveals danger. Royal Jump gives the king a " +
+            "longer leap when the path gets tight."
         )
     }),
     Object.freeze({
         "phase": "rule_queen_wrath",
         "focus": "queen_phase",
         "text": (
-            "When the queen meter fills, the Grand Regent Queen begins. " +
-            "Queen's Wrath lets Player 2 place a safe rook."
+            "When the counter reaches 12, the Grand Regent Queen enters and " +
+            "Queen's Wrath joins Black's tools."
         )
     }),
     Object.freeze({
         "phase": "rule_queen_goal",
         "focus": "queen_goal",
         "text": (
-            "Eagle Vision reveals queen and rook danger. The king wins by " +
-            "reaching the highlighted row below the royal guard."
+            "In the final duel, White must reach the highlighted row beneath " +
+            "the royal guard."
         )
     })
 ]);
@@ -390,6 +408,7 @@ const clear_all_timers = function () {
     clearTimeout(royal_guard_timer);
     clearTimeout(queen_arrival_timer);
     clearTimeout(tutorial_timer);
+    clearTimeout(queen_notice_timer);
     clearInterval(tutorial_animation_timer);
 };
 
@@ -428,6 +447,10 @@ const reset_game_state = function () {
     royal_jump_charge = royal_jump_max_charge;
 
     queens_wrath_active = false;
+    queens_wrath_revealed = false;
+    queen_notice_state = "hidden";
+    queen_notice.classList.add("hidden");
+    queen_notice.classList.remove("queen_notice_fly");
 
     hovered_column = undefined;
     hovered_position = undefined;
@@ -593,7 +616,7 @@ const show_pawn_chase_spotlight = function () {
     tutorial_focus = "pawns";
 
     tutorial_text.textContent = (
-        "Player 2's pawns will keep chasing the king up the board."
+        "Black's pawn wall keeps climbing behind the king."
     );
     tutorial_text.classList.remove("hidden");
     document.body.classList.add("tutorial_board_focus_mode");
@@ -665,7 +688,7 @@ const show_player_one_spotlight = function () {
     tutorial_focus = "king";
 
     tutorial_text.textContent = (
-        "Player 1 controls the white king and is trying to escape upward."
+        "White guides the king upward through the crossing."
     );
     tutorial_text.classList.remove("hidden");
     document.body.classList.add("tutorial_board_focus_mode");
@@ -1992,7 +2015,7 @@ const class_for_token = function (token, base_token, position) {
     }
 
     if (token === 2) {
-        classes.push("enemy_piece");
+        classes.push("black_piece");
         classes.push("knight_square");
     }
 
@@ -2001,12 +2024,12 @@ const class_for_token = function (token, base_token, position) {
     }
 
     if (token === 4) {
-        classes.push("enemy_piece");
+        classes.push("black_piece");
         classes.push("bishop_square");
     }
 
     if (token === 5 && !is_ghost_queen_square(base_token, position)) {
-        classes.push("enemy_piece");
+        classes.push("black_piece");
         classes.push("queen_square");
     }
 
@@ -2019,7 +2042,7 @@ const class_for_token = function (token, base_token, position) {
     }
 
     if (token === 7 && !is_ghost_rook_square(base_token, position)) {
-        classes.push("enemy_piece");
+        classes.push("black_piece");
         classes.push("rook_square");
     }
 
@@ -2185,7 +2208,7 @@ const alt_for_token = function (token, base_token, position) {
     }
 
     if (is_tutorial_king_focus_square(position)) {
-        return "Tutorial focus: Player 1, the escaping king";
+        return "Tutorial focus: White Pieces king";
     }
 
     if (is_tutorial_pawn_focus_square(position)) {
@@ -2193,7 +2216,7 @@ const alt_for_token = function (token, base_token, position) {
     }
 
     if (is_tutorial_top_row_focus_square(position)) {
-        return "Tutorial focus: enemy placement row";
+        return "Tutorial focus: Black Pieces placement row";
     }
 
     if (is_tutorial_danger_focus_square(position)) {
@@ -2213,7 +2236,7 @@ const alt_for_token = function (token, base_token, position) {
     }
 
     if (is_queen_animation_square(position)) {
-        return "The Grand Regent Queen removing a failed enemy piece";
+        return "The Grand Regent Queen removing a black piece";
     }
 
     if (is_ghost_king_square(position)) {
@@ -2264,7 +2287,7 @@ const piece_name = function (piece) {
         return "the Queen's Wrath rook";
     }
 
-    return "an enemy piece";
+    return "a black piece";
 };
 
 const next_piece_name = function () {
@@ -2634,6 +2657,7 @@ const update_tutorial_ability_demo = function () {
     const queen_goal_active = (
         tutorial_active && tutorial_phase === "rule_queen_goal"
     );
+    const queen_notice_active = tutorial_shows_queen_notice();
 
     eagle_vision_button.classList.toggle(
         "tutorial_ability_clicked",
@@ -2654,8 +2678,26 @@ const update_tutorial_ability_demo = function () {
         "tutorial_ability_clicked",
         queen_wrath_active && is_tutorial_queen_wrath_click_pulse()
     );
+    queens_wrath_button.classList.toggle(
+        "queen_ability_arrival",
+        queen_wrath_active && tutorial_queen_wrath_elapsed() < 1500
+    );
+
+    if (tutorial_active) {
+        queen_notice.classList.toggle("hidden", !queen_notice_active);
+        queen_notice.classList.toggle("queen_notice_fly", queen_notice_active);
+    }
 
     if (!stage_active && !queen_wrath_active && !queen_goal_active) {
+        if (
+            tutorial_active &&
+            tutorial_phase === "rule_place_piece" &&
+            tutorial_place_elapsed() >= tutorial_place_click_time + 1800
+        ) {
+            el("queen_progress_status").textContent = "1/12";
+            el("queen_progress_fill").style.width = `${100 / game.target_turns}%`;
+        }
+
         update_tutorial_mouse();
         return;
     }
@@ -2711,6 +2753,65 @@ const update_turn_panels = function () {
     ) {
         el("away_player").classList.add("active_turn");
     }
+};
+
+const tutorial_shows_queen_meter = function () {
+    if (
+        tutorial_active &&
+        tutorial_phase === "rule_place_piece" &&
+        tutorial_place_elapsed() >= tutorial_place_click_time + 1800
+    ) {
+        return true;
+    }
+
+    return (
+        tutorial_active &&
+        (
+            tutorial_phase === "rule_queen_wrath" ||
+            tutorial_phase === "rule_queen_goal"
+        )
+    );
+};
+
+const tutorial_shows_queens_wrath = function () {
+    return (
+        tutorial_active &&
+        (
+            tutorial_phase === "rule_queen_wrath" ||
+            tutorial_phase === "rule_queen_goal"
+        )
+    );
+};
+
+const tutorial_shows_queen_notice = function () {
+    const elapsed = tutorial_place_elapsed();
+
+    return (
+        tutorial_active &&
+        tutorial_phase === "rule_place_piece" &&
+        elapsed >= tutorial_place_click_time &&
+        elapsed < tutorial_place_cycle - 150
+    );
+};
+
+const reveal_queen_meter_after_first_piece = function () {
+    if (
+        tutorial_active ||
+        queen_notice_state !== "hidden" ||
+        game.pieces.length === 0
+    ) {
+        return;
+    }
+
+    queen_notice_state = "intro";
+    queen_notice.classList.remove("hidden");
+    queen_notice.classList.add("queen_notice_fly");
+    queen_notice_timer = setTimeout(function () {
+        queen_notice_state = "panel";
+        queen_notice.classList.add("hidden");
+        queen_notice.classList.remove("queen_notice_fly");
+        redraw_board();
+    }, 2600);
 };
 
 const update_eagle_vision_button = function () {
@@ -2776,6 +2877,7 @@ const update_royal_jump_button = function () {
 
 const update_queens_wrath_button = function () {
     const ready = is_player_two_queen_turn();
+    const visible = game.queen_active || tutorial_shows_queens_wrath();
 
     if (queens_wrath_active) {
         el("queens_wrath_status").textContent = "Choose a square";
@@ -2785,15 +2887,33 @@ const update_queens_wrath_button = function () {
         el("queens_wrath_status").textContent = "Final duel";
     }
 
+    queens_wrath_button.classList.toggle("hidden", !visible);
+
+    if (game.queen_active && !queens_wrath_revealed) {
+        queens_wrath_button.classList.add("queen_ability_arrival");
+        queens_wrath_revealed = true;
+    } else if (!game.queen_active) {
+        queens_wrath_button.classList.remove("queen_ability_arrival");
+    }
+
     queens_wrath_button.disabled = !ready;
 };
 
 const update_queen_progress = function () {
+    const visible = (
+        queen_notice_state === "panel" ||
+        game.queen_active ||
+        game.royal_guard_active ||
+        game.phase === "royal_guard_arrival" ||
+        game.phase === "queen_arrival" ||
+        tutorial_shows_queen_meter()
+    );
     const progress_percentage = Math.min(
         game.turn / game.target_turns * 100,
         100
     );
 
+    queen_progress_panel.classList.toggle("hidden", !visible);
     el("queen_progress_fill").style.width = `${progress_percentage}%`;
 
     if (game.queen_active) {
@@ -2831,7 +2951,7 @@ const charge_abilities_after_king_move = function () {
     );
 };
 
-const slot_cells = range(0, game.width).map(function (column_index) {
+const board_cells = range(0, game.width).map(function (column_index) {
     const visual_height = (
         game.height +
         visual_extra_top_rows +
@@ -2844,7 +2964,7 @@ const slot_cells = range(0, game.width).map(function (column_index) {
     column_div.tabIndex = 0;
     column_div.setAttribute(
         "aria-label",
-        `Column ${column_index + 1}. Press Enter to place the next enemy piece.`
+        `Column ${column_index + 1}. Press Space to place the next black piece.`
     );
 
     column_div.onmouseenter = function () {
@@ -2879,6 +2999,7 @@ const slot_cells = range(0, game.width).map(function (column_index) {
         }
 
         game = KingCrossing.place_piece(game, column_index);
+        reveal_queen_meter_after_first_piece();
         hovered_column = undefined;
         redraw_board();
     };
@@ -2959,7 +3080,7 @@ const move_king_to_position = function (position) {
 };
 
 const attach_cell_handlers = function () {
-    slot_cells.forEach(function (column, column_index) {
+    board_cells.forEach(function (column, column_index) {
         column.forEach(function (cell, visual_row_index) {
             const position = {
                 "column": column_index,
@@ -3026,7 +3147,7 @@ const open_result_dialog = function () {
     if (game.result === "sealed") {
         el("result_winner").textContent = "Player 2 Wins";
         el("result_message").textContent = (
-            "The enemy court filled the road ahead. The king was trapped between the soldiers and the pawn wall."
+            "The black pieces filled the road ahead. The king was trapped between the soldiers and the pawn wall."
         );
     }
 
@@ -3158,7 +3279,7 @@ const redraw_board = function () {
         tutorial_active && tutorial_focus !== "none"
     );
 
-    slot_cells.forEach(function (column, column_index) {
+    board_cells.forEach(function (column, column_index) {
         column.forEach(function (cell, visual_row_index) {
             const position = {
                 "column": column_index,
@@ -3185,32 +3306,32 @@ const redraw_board = function () {
     });
 
     if (tutorial_active && tutorial_phase === "rule_place_piece") {
-        el("home_ready").textContent = "Player 1: wait for the enemy court.";
-        el("away_ready").textContent = "Cycle: Pawn, Knight, Bishop.";
+        el("home_ready").textContent = "White Pieces: wait for Black.";
+        el("away_ready").textContent = "Black Pieces cycle: Pawn, Knight, Bishop.";
     } else if (tutorial_active && tutorial_focus === "king") {
-        el("home_ready").textContent = "Player 1: the escaping king.";
-        el("away_ready").textContent = "The enemy court waits.";
+        el("home_ready").textContent = "White Pieces: guide the king.";
+        el("away_ready").textContent = "Black Pieces wait.";
     } else if (tutorial_active && tutorial_focus === "pawns") {
         el("home_ready").textContent = "The king must keep moving.";
         el("away_ready").textContent = "The pawn wall is chasing.";
     } else if (opening_active) {
         if (opening_phase === "king") {
             el("home_ready").textContent = "The king enters the crossing...";
-            el("away_ready").textContent = "The enemy court waits.";
+            el("away_ready").textContent = "Black Pieces wait.";
         } else {
             el("home_ready").textContent = "The pawn wall surges into frame...";
             el("away_ready").textContent = "Prepare to place the first piece.";
         }
     } else if (game.phase === "royal_guard_arrival") {
-        el("home_ready").textContent = "Player 1 has completed the crossing route.";
-        el("away_ready").textContent = "Player 2 summons the royal guard.";
+        el("home_ready").textContent = "White Pieces reached the royal boundary.";
+        el("away_ready").textContent = "Black Pieces summon the royal guard.";
     } else if (game.phase === "queen_arrival") {
-        el("home_ready").textContent = "Player 1: prepare for the final duel.";
+        el("home_ready").textContent = "White Pieces: prepare for the final duel.";
         el("away_ready").textContent = (
-            "The Grand Regent Queen removes the failed court."
+            "The Grand Regent Queen clears the road."
         );
     } else if (game.phase === "move_queen") {
-        el("home_ready").textContent = "Player 1: survive the queen.";
+        el("home_ready").textContent = "White Pieces: survive the queen.";
         if (queens_wrath_active) {
             el("away_ready").textContent = (
                 "Queen's Wrath: place a rook that does not directly check " +
@@ -3218,8 +3339,7 @@ const redraw_board = function () {
             );
         } else {
             el("away_ready").textContent = (
-                "Player 2 Turn: move the Grand Regent Queen or use " +
-                "Queen's Wrath."
+                "Black Pieces: move the queen, or press Tab for Queen's Wrath."
             );
         }
     } else if (game.queen_active && game.result === "playing") {
@@ -3228,18 +3348,18 @@ const redraw_board = function () {
         );
         el("away_ready").textContent = "The Grand Regent Queen controls the board.";
     } else if (game.phase === "place_piece" && game.result === "playing") {
-        el("home_ready").textContent = "Player 1: wait for the enemy court.";
+        el("home_ready").textContent = "White Pieces: wait for Black.";
         el("away_ready").textContent = (
-            `Player 2 Turn: place a ${next_piece_name()} on the top row.`
+            `Black Pieces: place a ${next_piece_name()} on the top row.`
         );
     } else if (game.phase === "move_king" && game.result === "playing") {
         el("home_ready").textContent = (
             royal_jump_available()
             ? "Royal Jump: gold dots show range, not safety."
-            : "Player 1 Turn: click a dot, or move with Q, W, E, A, S."
+            : "White Pieces: choose a dot, then press Space."
         );
         el("away_ready").textContent = (
-            `Next enemy piece: ${next_piece_name()}.`
+            `Next Black piece: ${next_piece_name()}.`
         );
     } else {
         el("home_ready").textContent = KingCrossing.status_message(game);
@@ -3392,29 +3512,256 @@ const continue_pawn_wave = function () {
     );
 };
 
-const move_king = function (direction) {
-    if (input_locked) {
-        return;
-    }
+const all_board_positions = function () {
+    return range(0, game.width).reduce(function (positions, column) {
+        return positions.concat(range(0, game.height).map(function (row) {
+            return {
+                "column": column,
+                "row": row
+            };
+        }));
+    }, []);
+};
 
-    const offset_map = {
-        "up_left": {"column": -1, "row": 1},
-        "up": {"column": 0, "row": 1},
-        "up_right": {"column": 1, "row": 1},
-        "left": {"column": -1, "row": 0},
-        "right": {"column": 1, "row": 0},
-        "down": {"column": 0, "row": -1}
-    };
-    const offset = offset_map[direction];
+const legal_king_positions = function () {
+    return all_board_positions().filter(is_king_move_hint_square);
+};
 
-    if (offset === undefined) {
-        return;
-    }
+const legal_queen_positions = function () {
+    return all_board_positions().filter(is_queen_move_hint_square);
+};
 
-    move_king_to_position({
-        "column": game.king.column + offset.column,
-        "row": game.king.row + offset.row
+const legal_wrath_positions = function () {
+    return all_board_positions().filter(is_queens_wrath_hint_square);
+};
+
+const legal_black_placement_columns = function () {
+    return range(0, game.width).filter(function (column) {
+        return KingCrossing.can_place_piece(game, column);
     });
+};
+
+const first_legal_position = function (positions) {
+    return positions.slice().sort(function (first, second) {
+        if (first.row !== second.row) {
+            return second.row - first.row;
+        }
+
+        return first.column - second.column;
+    })[0];
+};
+
+const distance_between = function (first, second) {
+    return (
+        Math.abs(first.column - second.column) +
+        Math.abs(first.row - second.row)
+    );
+};
+
+const directional_candidates = function (origin, positions, offset) {
+    return positions.filter(function (position) {
+        if (offset.column < 0 && position.column >= origin.column) {
+            return false;
+        }
+
+        if (offset.column > 0 && position.column <= origin.column) {
+            return false;
+        }
+
+        if (offset.row < 0 && position.row >= origin.row) {
+            return false;
+        }
+
+        if (offset.row > 0 && position.row <= origin.row) {
+            return false;
+        }
+
+        if (offset.column === 0 && position.column !== origin.column) {
+            return false;
+        }
+
+        if (offset.row === 0 && position.row !== origin.row) {
+            return false;
+        }
+
+        return true;
+    });
+};
+
+const nearest_position = function (origin, positions) {
+    return positions.slice().sort(function (first, second) {
+        const distance_difference = (
+            distance_between(origin, first) - distance_between(origin, second)
+        );
+
+        if (distance_difference !== 0) {
+            return distance_difference;
+        }
+
+        if (first.row !== second.row) {
+            return second.row - first.row;
+        }
+
+        return first.column - second.column;
+    })[0];
+};
+
+const select_position_by_direction = function (origin, positions, offset) {
+    const directional = directional_candidates(origin, positions, offset);
+
+    if (directional.length > 0) {
+        return nearest_position(origin, directional);
+    }
+
+    return nearest_position(origin, positions);
+};
+
+const move_king_selector = function (offset) {
+    if (!is_player_one_turn()) {
+        return;
+    }
+
+    const positions = legal_king_positions();
+    const origin = (
+        hovered_position !== undefined &&
+        positions.some(function (position) {
+            return same_position(position, hovered_position);
+        })
+        ? hovered_position
+        : game.king
+    );
+    const candidate = {
+        "column": origin.column + offset.column,
+        "row": origin.row + offset.row
+    };
+
+    if (
+        positions.some(function (position) {
+            return same_position(position, candidate);
+        })
+    ) {
+        hovered_position = candidate;
+    } else {
+        hovered_position = select_position_by_direction(
+            origin,
+            positions,
+            offset
+        );
+    }
+
+    redraw_board();
+};
+
+const confirm_king_selector = function () {
+    if (
+        is_player_one_turn() &&
+        hovered_position !== undefined &&
+        is_king_move_hint_square(hovered_position)
+    ) {
+        move_king_to_position(hovered_position);
+    }
+};
+
+const move_black_piece_selector = function (direction) {
+    if (!is_player_two_piece_turn()) {
+        return;
+    }
+
+    const columns = legal_black_placement_columns();
+
+    if (columns.length === 0) {
+        return;
+    }
+
+    const current_index = columns.indexOf(hovered_column);
+    const next_index = (
+        current_index < 0
+        ? 0
+        : (current_index + direction + columns.length) % columns.length
+    );
+
+    hovered_column = columns[next_index];
+    hovered_position = undefined;
+    redraw_board();
+};
+
+const confirm_black_piece_selector = function () {
+    if (
+        is_player_two_piece_turn() &&
+        hovered_column !== undefined &&
+        KingCrossing.can_place_piece(game, hovered_column)
+    ) {
+        game = KingCrossing.place_piece(game, hovered_column);
+        reveal_queen_meter_after_first_piece();
+        hovered_column = undefined;
+        hovered_position = undefined;
+        redraw_board();
+    }
+};
+
+const active_black_duel_positions = function () {
+    if (queens_wrath_active) {
+        return legal_wrath_positions();
+    }
+
+    return legal_queen_positions();
+};
+
+const move_black_duel_selector = function (offset) {
+    if (!is_player_two_queen_turn()) {
+        return;
+    }
+
+    const positions = active_black_duel_positions();
+
+    if (positions.length === 0) {
+        return;
+    }
+
+    const origin = (
+        hovered_position !== undefined &&
+        positions.some(function (position) {
+            return same_position(position, hovered_position);
+        })
+        ? hovered_position
+        : (
+            game.queen !== undefined && !queens_wrath_active
+            ? game.queen
+            : first_legal_position(positions)
+        )
+    );
+
+    hovered_position = select_position_by_direction(origin, positions, offset);
+    hovered_column = hovered_position.column;
+    redraw_board();
+};
+
+const confirm_black_duel_selector = function () {
+    if (!is_player_two_queen_turn() || hovered_position === undefined) {
+        return;
+    }
+
+    if (queens_wrath_active) {
+        spawn_wrath_rook_at_position(hovered_position);
+        return;
+    }
+
+    move_queen_to_position(hovered_position);
+};
+
+const toggle_black_duel_tool = function () {
+    if (!is_player_two_queen_turn()) {
+        return;
+    }
+
+    queens_wrath_active = !queens_wrath_active;
+    hovered_position = first_legal_position(active_black_duel_positions());
+    hovered_column = (
+        hovered_position === undefined
+        ? undefined
+        : hovered_position.column
+    );
+    redraw_board();
 };
 
 eagle_vision_button.onclick = function () {
@@ -3458,9 +3805,7 @@ queens_wrath_button.onclick = function () {
         return;
     }
 
-    queens_wrath_active = !queens_wrath_active;
-    hovered_position = undefined;
-    redraw_board();
+    toggle_black_duel_tool();
 };
 
 const close_instructions = function () {
@@ -3496,28 +3841,87 @@ result_dialog.onclick = reset_game;
 result_dialog.onkeydown = reset_game;
 
 document.onkeydown = function (event) {
-    if (event.key === "q" || event.key === "Q") {
-        move_king("up_left");
+    if (instructions_dialog.open || result_dialog.open) {
+        return;
     }
 
-    if (event.key === "w" || event.key === "W") {
-        move_king("up");
+    if (event.key === " ") {
+        event.preventDefault();
+        confirm_king_selector();
+        confirm_black_piece_selector();
+        confirm_black_duel_selector();
+        return;
     }
 
-    if (event.key === "e" || event.key === "E") {
-        move_king("up_right");
+    if (event.key === "Tab" && is_player_two_queen_turn()) {
+        event.preventDefault();
+        toggle_black_duel_tool();
+        return;
     }
 
-    if (event.key === "a" || event.key === "A") {
-        move_king("left");
+    if (is_player_one_turn()) {
+        if (event.key === "w" || event.key === "W") {
+            event.preventDefault();
+            move_king_selector({"column": 0, "row": 1});
+            return;
+        }
+
+        if (event.key === "a" || event.key === "A") {
+            event.preventDefault();
+            move_king_selector({"column": -1, "row": 0});
+            return;
+        }
+
+        if (event.key === "s" || event.key === "S") {
+            event.preventDefault();
+            move_king_selector({"column": 0, "row": -1});
+            return;
+        }
+
+        if (event.key === "d" || event.key === "D") {
+            event.preventDefault();
+            move_king_selector({"column": 1, "row": 0});
+            return;
+        }
     }
 
-    if (event.key === "d" || event.key === "D") {
-        move_king("right");
+    if (is_player_two_piece_turn()) {
+        if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            move_black_piece_selector(-1);
+            return;
+        }
+
+        if (event.key === "ArrowRight") {
+            event.preventDefault();
+            move_black_piece_selector(1);
+            return;
+        }
     }
 
-    if (event.key === "s" || event.key === "S") {
-        move_king("down");
+    if (is_player_two_queen_turn()) {
+        if (event.key === "ArrowUp") {
+            event.preventDefault();
+            move_black_duel_selector({"column": 0, "row": 1});
+            return;
+        }
+
+        if (event.key === "ArrowDown") {
+            event.preventDefault();
+            move_black_duel_selector({"column": 0, "row": -1});
+            return;
+        }
+
+        if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            move_black_duel_selector({"column": -1, "row": 0});
+            return;
+        }
+
+        if (event.key === "ArrowRight") {
+            event.preventDefault();
+            move_black_duel_selector({"column": 1, "row": 0});
+        }
     }
 };
 

@@ -2,27 +2,32 @@
 
 King's Crossing is a chess-themed two-player survival game for Computing 2.
 
-Player 1 controls the escaping king and tries to cross the board. Player 2
-controls the enemy court by placing chess pieces in the king's path. The pawn
-wall advances from below whenever the king moves forward, so standing still for
-too long becomes dangerous.
+White Pieces guide the king upward through the crossing. Black Pieces place
+threats on the top row and try to close the route before the king escapes. The
+pawn wall advances from below whenever the king moves forward, so standing still
+for too long becomes dangerous.
 
 ## How to Play
 
-- Player 2 places alternating knights and bishops on the top row.
-- Player 1 moves the king with `Q`, `W`, `E`, `A`, `D`, and `S`, or by clicking
-  legal move dots.
-- Enemy pieces attack using chess-style movement.
+- Black Pieces place one piece on the top row in a pawn, knight, bishop cycle.
+- White Pieces move the king by clicking legal move dots, or by using `W`,
+  `A`, `S`, and `D` to move the selector and `Space` to confirm.
+- Black Pieces can use the mouse to place pieces, or use the left and right
+  arrow keys to choose a top-row square and `Space` to confirm.
+- Black pieces attack using chess-style movement.
 - The king loses if it moves onto the pawn wall, into the pawn danger row, onto
-  an enemy piece, or into an attacked square.
-- The king can capture an enemy piece only when that piece is not defended.
+  a black piece, or into an attacked square.
+- The king can capture a black piece only when that piece is not defended.
 - Eagle Vision reveals dangerous squares when charged.
 - Royal Jump lets the king move up to two squares when charged.
 - When the queen meter fills, the royal guard blocks the top row and the Grand
   Regent Queen arrives for the final duel.
-- During the final duel, Player 2 can move the queen or use Queen's Wrath to
-  place a rook on an empty square that does not immediately check the king.
-- Player 1 wins by reaching the row beneath the royal guard.
+- During the final duel, Black Pieces can press `Tab` to switch between moving
+  the queen and using Queen's Wrath. Use the arrow keys to choose a legal square
+  and `Space` to confirm.
+- Queen's Wrath places a rook on an empty square that does not immediately check
+  the king.
+- White Pieces win by reaching the row beneath the royal guard.
 
 ## Project Files
 

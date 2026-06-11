@@ -6,7 +6,7 @@
     --image-border-radius: 7px;
     --result-height: 250px;
     --result-width: 500px;
-    --sidebar-width: 250px;
+    --sidebar-width: 310px;
 
     --banner-background: #262522;
     --banner-colour: #ffffff;
@@ -22,7 +22,7 @@
     --light-square: #eeeed2;
     --dark-square: #769656;
     --king-square: #f3d36b;
-    --enemy-piece-colour: #111111;
+    --black-piece-colour: #111111;
     --king-colour: #fff5cc;
     --attack-path: #8e2b23;
     --attacker-highlight: #f3d36b;
@@ -176,9 +176,9 @@ main
     box-shadow: 0 0 18px #fff4a8 inset;
 }
 
-.enemy_piece
+.black_piece
 {
-    color: var(--enemy-piece-colour);
+    color: var(--black-piece-colour);
     text-shadow: 0 1px 0 #ffffff99;
 }
 
@@ -349,6 +349,7 @@ aside
     background: var(--sidebar-background);
     color: var(--sidebar-colour);
     height: calc(100% - var(--banner-height));
+    overflow: hidden;
     padding-left: 0.5em;
     padding-right: 0.5em;
     position: absolute;
@@ -359,13 +360,62 @@ aside
 
 aside.active_turn
 {
-    box-shadow: 0 0 22px #f3d36b inset;
+    box-shadow: 0 0 20px #ffffff88 inset;
+}
+
+aside.active_turn::before
+{
+    animation: turn_glow_rise 2.8s ease-in-out infinite;
+    background:
+        radial-gradient(ellipse at 50% 100%, #ffffffbf 0%, #ffffff55 32%, transparent 70%),
+        linear-gradient(0deg, #ffffff33 0%, transparent 58%);
+    bottom: 0;
+    content: "";
+    height: 46%;
+    left: 0;
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+    z-index: 0;
+}
+
+aside.active_turn::after
+{
+    animation: turn_flame 1.8s ease-in-out infinite;
+    background:
+        radial-gradient(ellipse at 50% 70%, #ffffffcc 0%, #ffffff88 26%, transparent 62%),
+        radial-gradient(ellipse at 34% 88%, #ffffff80 0%, transparent 46%),
+        radial-gradient(ellipse at 66% 88%, #ffffff80 0%, transparent 46%);
+    bottom: -20px;
+    content: "";
+    filter: blur(3px);
+    height: 180px;
+    left: 18%;
+    pointer-events: none;
+    position: absolute;
+    width: 64%;
+    z-index: 0;
+}
+
+aside > *
+{
+    position: relative;
+    z-index: 1;
 }
 
 .sidebar h2
 {
     font-family: Georgia, "Times New Roman", serif;
+    font-size: 23pt;
     margin-bottom: 0;
+}
+
+.sidebar.active_turn h2
+{
+    font-size: 30pt;
+    text-shadow:
+        0 0 12px #ffffff,
+        0 2px 3px #000000;
 }
 
 .sidebar .player
@@ -382,8 +432,14 @@ aside.active_turn
 #away_player_type
 {
     color: var(--banner-colour);
-    font-size: larger;
+    font-size: 17pt;
     font-weight: bold;
+}
+
+.sidebar.active_turn #home_player_type,
+.sidebar.active_turn #away_player_type
+{
+    font-size: 20pt;
 }
 
 .sidebar .game_info img
@@ -431,7 +487,7 @@ aside.active_turn
 #home_ready,
 #away_ready
 {
-    font-size: 15pt;
+    font-size: 15.5pt;
     font-weight: bold;
     line-height: 1.3;
     margin-left: auto;
@@ -439,7 +495,14 @@ aside.active_turn
     max-width: 90%;
 }
 
+.sidebar.active_turn #home_ready,
+.sidebar.active_turn #away_ready
+{
+    font-size: 17pt;
+}
+
 #instructions_button,
+#single_player_button,
 #eagle_vision_button,
 #royal_jump_button,
 #queens_wrath_button
@@ -478,7 +541,34 @@ aside.active_turn
     left: 16px;
 }
 
+#single_player_button
+{
+    bottom: 132px;
+    cursor: pointer;
+    left: 16px;
+    min-width: 170px;
+    text-align: left;
+}
+
 #eagle_vision_button
+{
+    bottom: 190px;
+    cursor: pointer;
+    left: 16px;
+    min-width: 170px;
+    text-align: left;
+}
+
+#royal_jump_button
+{
+    bottom: 284px;
+    cursor: pointer;
+    left: 16px;
+    min-width: 170px;
+    text-align: left;
+}
+
+#queens_wrath_button
 {
     bottom: 16px;
     cursor: pointer;
@@ -487,33 +577,16 @@ aside.active_turn
     text-align: left;
 }
 
-#royal_jump_button
-{
-    bottom: 110px;
-    cursor: pointer;
-    min-width: 180px;
-    right: 16px;
-    text-align: left;
-}
-
-#queens_wrath_button
-{
-    bottom: 204px;
-    cursor: pointer;
-    min-width: 180px;
-    right: 16px;
-    text-align: left;
-}
-
 #queen_progress_panel
 {
-    bottom: 288px;
+    bottom: 112px;
     min-width: 220px;
     right: 16px;
     text-align: left;
 }
 
 #instructions_button:hover,
+#single_player_button:hover,
 #eagle_vision_button:hover,
 #royal_jump_button:hover,
 #queens_wrath_button:hover
@@ -587,6 +660,62 @@ aside.active_turn
     height: 100%;
     transition: width 250ms ease;
     width: 0%;
+}
+
+#queen_notice
+{
+    align-items: center;
+    background: #262522f2;
+    border: 1px solid #5a5a56;
+    border-radius: 16px;
+    box-shadow:
+        0 0 26px #000000dd,
+        0 0 34px #d7a8ff55;
+    color: #ffffff;
+    display: flex;
+    font-size: 22pt;
+    font-weight: bold;
+    justify-content: center;
+    left: 50%;
+    min-height: 110px;
+    overflow: hidden;
+    padding: 1em 1.2em;
+    pointer-events: none;
+    position: fixed;
+    text-align: center;
+    text-shadow: 0 2px 3px #000000;
+    top: 44%;
+    transform: translate(-50%, -50%);
+    width: min(560px, 52vw);
+    z-index: 2400;
+}
+
+#queen_notice_icon
+{
+    color: #d7a8ff;
+    font-size: 110pt;
+    left: 50%;
+    opacity: 0.22;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+}
+
+#queen_notice_text
+{
+    position: relative;
+    z-index: 1;
+}
+
+#queen_notice.queen_notice_fly
+{
+    animation: queen_notice_fly_to_panel 2.6s ease-in-out forwards;
+}
+
+#queens_wrath_button.queen_ability_arrival
+{
+    animation: queen_ability_arrival 1.5s ease-out;
 }
 
 #instructions_dialog
@@ -776,7 +905,7 @@ aside.active_turn
     text-shadow: 0 2px 4px #000000;
 }
 
-.tutorial_enemy_pieces
+.tutorial_black_pieces
 {
     color: #111111;
     letter-spacing: 0.08em;
@@ -1103,6 +1232,7 @@ aside.active_turn
 .tutorial_board_focus_mode header,
 .tutorial_board_focus_mode aside,
 .tutorial_board_focus_mode #instructions_button,
+.tutorial_board_focus_mode #single_player_button,
 .tutorial_board_focus_mode #eagle_vision_button,
 .tutorial_board_focus_mode #royal_jump_button,
 .tutorial_board_focus_mode #queens_wrath_button,
@@ -1368,6 +1498,94 @@ body.tutorial_focus_queen_meter #queen_progress_panel
         0 0 24px var(--banner-colour);
     filter: none !important;
     z-index: 1500;
+}
+
+@keyframes turn_glow_rise
+{
+    0%,
+    100%
+    {
+        opacity: 0.65;
+        transform: translateY(10px);
+    }
+
+    50%
+    {
+        opacity: 1;
+        transform: translateY(-4px);
+    }
+}
+
+@keyframes turn_flame
+{
+    0%,
+    100%
+    {
+        opacity: 0.55;
+        transform: scaleX(0.92) translateY(8px);
+    }
+
+    50%
+    {
+        opacity: 0.95;
+        transform: scaleX(1.06) translateY(-4px);
+    }
+}
+
+@keyframes queen_notice_fly_to_panel
+{
+    0%
+    {
+        left: 50%;
+        opacity: 0;
+        top: 44%;
+        transform: translate(-50%, -50%) scale(0.92);
+    }
+
+    14%,
+    62%
+    {
+        left: 50%;
+        opacity: 1;
+        top: 44%;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    100%
+    {
+        left: calc(100% - 126px);
+        opacity: 0;
+        top: calc(100% - 214px);
+        transform: translate(-50%, -50%) scale(0.42);
+    }
+}
+
+@keyframes queen_ability_arrival
+{
+    0%
+    {
+        box-shadow:
+            0 0 0 0 #d7a8ff inset,
+            0 0 0 #d7a8ff;
+        filter: brightness(0.8);
+        transform: translateY(24px) scale(0.9);
+    }
+
+    45%
+    {
+        box-shadow:
+            0 0 0 4px #ffffff inset,
+            0 0 34px #d7a8ff;
+        filter: brightness(1.45);
+        transform: translateY(0) scale(1.04);
+    }
+
+    100%
+    {
+        box-shadow: 0 4px 0 var(--button-green-shadow);
+        filter: none;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .tutorial_board_focus_mode .column,

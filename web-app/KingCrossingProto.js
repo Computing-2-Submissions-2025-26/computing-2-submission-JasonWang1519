@@ -1,11 +1,11 @@
 /**
  * KingCrossingProto.js - Game logic for King's Crossing
- * A chess-themed survival game where a king flees upward through enemy territory
+ * A chess-themed survival game where a king flees upward through black-piece territory
  *
  * Domain Concepts:
  * - Grid: The board the king crosses (8 columns × 9 rows)
  * - King: Player 1's piece that must escape
- * - Enemy Pieces: Pawns, Knights, Bishops, and Queen's Wrath Rooks
+ * - Black Pieces: Pawns, Knights, Bishops, and Queen's Wrath Rooks
  * - Pawn Wall: Advances from below, pursuing the king
  * - Queen: The Grand Regent Queen that appears in the final phase
  * - Royal Guard: White pawns that block the top row before the queen arrives
@@ -109,7 +109,7 @@ const make_game = function (
     width,
     height,
     king_position,
-    enemy_pieces,
+    black_pieces,
     queen_position,
     queen_active,
     royal_guard_active,
@@ -125,7 +125,7 @@ const make_game = function (
         width,
         height,
         king: copy_position(king_position),
-        pieces: enemy_pieces.map(copy_piece),
+        pieces: black_pieces.map(copy_piece),
         queen: copy_position(queen_position),
         queen_active,
         royal_guard_active,
@@ -152,7 +152,7 @@ KingCrossing.create_game = function (width = 8, height = 9, target_turns = 12) {
         width,
         height,
         {column: Math.floor(width / 2), row: 2},  // King starts center-bottom
-        [],                                        // No enemy pieces yet
+        [],                                        // No black pieces yet
         undefined,                                 // No queen yet
         false,                                     // Queen not active
         false,                                     // Royal guard not active
@@ -348,7 +348,7 @@ const all_attackers = function (game) {
 };
 
 /**
- * Get all squares attacked by enemy pieces
+ * Get all squares attacked by black pieces
  * @memberof KingCrossing
  */
 KingCrossing.all_attacked_squares = function (game) {
@@ -452,7 +452,7 @@ const begin_royal_guard_arrival = function (game) {
 };
 
 /**
- * Begin the queen arrival phase (queen removes failed enemy pieces)
+ * Begin the queen arrival phase (queen removes failed black pieces)
  * @memberof KingCrossing
  */
 KingCrossing.begin_queen_arrival = function (game) {
@@ -483,7 +483,7 @@ KingCrossing.begin_queen_duel = function (game) {
         game.width,
         game.height,
         game.king,
-        [],  // Remove all enemy pieces
+        [],  // Remove all black pieces
         {column: Math.floor(game.width / 2), row: game.height - 3},  // Queen enters
         true,  // Queen now active
         true,  // Royal guard stays
@@ -609,7 +609,7 @@ KingCrossing.can_place_piece = function (game, column) {
 };
 
 /**
- * Place an enemy piece on the top row
+ * Place a black piece on the top row
  * @memberof KingCrossing
  */
 KingCrossing.place_piece = function (game, column) {
@@ -1004,9 +1004,9 @@ KingCrossing.piece_type_at = function (game, position) {
         return KING;
     }
 
-    const enemy_piece = piece_at(game, position);
-    if (enemy_piece !== undefined) {
-        return enemy_piece.type;
+    const black_piece = piece_at(game, position);
+    if (black_piece !== undefined) {
+        return black_piece.type;
     }
 
     if (KingCrossing.is_pawn_wall(game, position)) {
@@ -1079,13 +1079,13 @@ KingCrossing.status_message = function (game) {
     const remaining_dodges = MAXIMUM_DODGE_MOVES - game.dodge_moves;
 
     if (game.result === "won") {
-        return "Player 1 wins. The king escaped the Grand Regent Queen.";
+        return "White Pieces win. The king escaped the Grand Regent Queen.";
     }
     if (game.result === "sealed") {
-        return "Player 2 wins. The enemy court sealed the crossing.";
+        return "Black Pieces win. The road was sealed.";
     }
     if (game.result === "lost") {
-        return "Player 2 wins. The king was trapped.";
+        return "Black Pieces win. The king was trapped.";
     }
     if (game.phase === "royal_guard_arrival") {
         return "The royal guard descends.";
@@ -1094,7 +1094,7 @@ KingCrossing.status_message = function (game) {
         return "The Grand Regent Queen has arrived.";
     }
     if (game.phase === "move_queen") {
-        return "Player 2: move the Grand Regent Queen.";
+        return "Black Pieces: move the Grand Regent Queen.";
     }
     if (game.queen_active) {
         return "Final duel: the king faces the Grand Regent Queen.";
@@ -1108,14 +1108,14 @@ KingCrossing.status_message = function (game) {
             ? "pawn"
             : game.next_piece
         );
-        return `Player 2: place a ${piece_name} on the road ahead.`;
+        return `Black Pieces: place a ${piece_name} on the road ahead.`;
     }
     if (game.phase === "scroll_world") {
         return "The pawn wall advances.";
     }
 
     return (
-        "Player 1: move with Q, W, E, A, or D. " +
+        "White Pieces: choose a square with W, A, S, D, then press Space. " +
         `Dodges before next piece: ${remaining_dodges}.`
     );
 };
