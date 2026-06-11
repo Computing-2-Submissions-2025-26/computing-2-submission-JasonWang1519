@@ -25,7 +25,7 @@ the AI takes the other side.
 - Eagle Vision reveals dangerous squares when charged.
 - Royal Jump lets the king move up to two squares when charged.
 - When the queen meter fills, the royal guard blocks the top row and the Grand
-  Regent Queen arrives for the final duel. The queen arrives after 7 turns.
+  Regent Queen arrives for the final duel. The queen arrives after 12 turns.
 - During the final duel, Black Pieces can press `Tab` to switch between moving
   the queen and using Queen's Wrath. Use the arrow keys to choose a legal square
   and `Space` to confirm.

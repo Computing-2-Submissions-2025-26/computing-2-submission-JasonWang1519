@@ -144,10 +144,10 @@ const make_game = function (
  * @memberof KingCrossing
  * @param {number} [width=8] Grid width
  * @param {number} [height=9] Grid height
- * @param {number} [target_turns=7] Turns until queen arrives
+ * @param {number} [target_turns=12] Turns until queen arrives
  * @returns {Game} New game state
  */
-KingCrossing.create_game = function (width = 8, height = 9, target_turns = 7) {
+KingCrossing.create_game = function (width = 8, height = 9, target_turns = 12) {
     return make_game(
         width,
         height,

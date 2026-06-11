@@ -232,7 +232,7 @@ queen_notice.className = "hidden";
 queen_notice.innerHTML = `
     <span id="queen_notice_icon">♛</span>
     <span id="queen_notice_text">
-        Grand Regent Queen will arrive in 7 moves
+        Grand Regent Queen will arrive in 12 moves
     </span>
 `;
 document.body.append(queen_notice);

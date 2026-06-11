@@ -1262,6 +1262,22 @@ aside > *
     transform: none;
 }
 
+.tutorial_start_mode #instructions_button,
+.tutorial_start_mode #single_player_button,
+.tutorial_start_mode #eagle_vision_button,
+.tutorial_start_mode #royal_jump_button,
+.tutorial_start_mode #queens_wrath_button,
+.tutorial_start_mode #queen_progress_panel
+{
+    display: none !important;
+}
+
+.tutorial_board_focus_mode #instructions_button,
+.tutorial_board_focus_mode #single_player_button
+{
+    display: none !important;
+}
+
 #tutorial_text
 {
     background: #262522f2;
