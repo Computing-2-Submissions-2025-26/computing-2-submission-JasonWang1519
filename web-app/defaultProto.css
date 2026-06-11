@@ -517,7 +517,7 @@ aside > *
     font-weight: bold;
     padding: 0.55em 0.8em;
     position: fixed;
-    z-index: 5;
+    z-index: 2700;
 }
 
 #queen_progress_panel
@@ -548,6 +548,74 @@ aside > *
     left: 16px;
     min-width: 170px;
     text-align: left;
+}
+
+#single_player_dialog
+{
+    align-items: center;
+    background: #000000aa;
+    bottom: 0;
+    color: #ffffff;
+    display: flex;
+    justify-content: center;
+    left: 0;
+    padding: 24px;
+    position: fixed;
+    right: 0;
+    top: 0;
+    z-index: 3000;
+}
+
+#single_player_card
+{
+    background: #262522;
+    border: 1px solid #5a5a56;
+    border-radius: 12px;
+    box-shadow: 0 18px 60px #000000aa;
+    max-width: 480px;
+    padding: 28px;
+    text-align: center;
+}
+
+#single_player_card h2
+{
+    font-size: 28pt;
+    margin: 0 0 0.35em;
+}
+
+#single_player_card p
+{
+    color: #d8d8d0;
+    font-size: 14pt;
+    line-height: 1.35;
+    margin: 0 0 1.4em;
+}
+
+#single_player_choices
+{
+    display: grid;
+    gap: 14px;
+}
+
+#choose_white_pieces,
+#choose_black_pieces
+{
+    background: var(--button-green);
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 0 var(--button-green-shadow);
+    color: #ffffff;
+    cursor: pointer;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 15pt;
+    font-weight: bold;
+    padding: 0.8em 1em;
+}
+
+#choose_white_pieces:hover,
+#choose_black_pieces:hover
+{
+    background: var(--button-green-hover);
 }
 
 #eagle_vision_button

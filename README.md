@@ -7,6 +7,10 @@ threats on the top row and try to close the route before the king escapes. The
 pawn wall advances from below whenever the king moves forward, so standing still
 for too long becomes dangerous.
 
+The game can be played as a two-player match or as a single-player match against
+the built-in AI. In single player, choose either White Pieces or Black Pieces;
+the AI takes the other side.
+
 ## How to Play
 
 - Black Pieces place one piece on the top row in a pawn, knight, bishop cycle.
@@ -21,7 +25,7 @@ for too long becomes dangerous.
 - Eagle Vision reveals dangerous squares when charged.
 - Royal Jump lets the king move up to two squares when charged.
 - When the queen meter fills, the royal guard blocks the top row and the Grand
-  Regent Queen arrives for the final duel.
+  Regent Queen arrives for the final duel. The queen arrives after 7 turns.
 - During the final duel, Black Pieces can press `Tab` to switch between moving
   the queen and using Queen's Wrath. Use the arrow keys to choose a legal square
   and `Space` to confirm.

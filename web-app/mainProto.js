@@ -1,5 +1,5 @@
 /*jslint browser */
-import KingCrossing from "./KingCrossingProto.js?v=selector-controls-2";
+import KingCrossing from "./KingCrossingProto.js?v=single-player-12";
 
 const piece_symbols = [
     "",
@@ -75,6 +75,10 @@ let game = KingCrossing.create_game();
 
 let input_locked = true;
 let result_pending = false;
+
+let play_mode = "multiplayer";
+let human_side = "white";
+let ai_turn_timer;
 
 let pawn_wave_active = false;
 let pawn_wave_column = -1;
@@ -159,6 +163,25 @@ single_player_button.type = "button";
 single_player_button.textContent = "Single Player";
 document.body.append(single_player_button);
 
+const single_player_dialog = document.createElement("div");
+single_player_dialog.id = "single_player_dialog";
+single_player_dialog.className = "hidden";
+single_player_dialog.innerHTML = `
+    <section id="single_player_card">
+        <h2>Single Player</h2>
+        <p>Choose your side. The AI will play the other pieces.</p>
+        <div id="single_player_choices">
+            <button id="choose_white_pieces" data-side="white" type="button">
+                Play White Pieces
+            </button>
+            <button id="choose_black_pieces" data-side="black" type="button">
+                Play Black Pieces
+            </button>
+        </div>
+    </section>
+`;
+document.body.append(single_player_dialog);
+
 const eagle_vision_button = document.createElement("button");
 eagle_vision_button.id = "eagle_vision_button";
 eagle_vision_button.type = "button";
@@ -209,7 +232,7 @@ queen_notice.className = "hidden";
 queen_notice.innerHTML = `
     <span id="queen_notice_icon">♛</span>
     <span id="queen_notice_text">
-        Grand Regent Queen will arrive in 12 moves
+        Grand Regent Queen will arrive in 7 moves
     </span>
 `;
 document.body.append(queen_notice);
@@ -409,6 +432,7 @@ const clear_all_timers = function () {
     clearTimeout(queen_arrival_timer);
     clearTimeout(tutorial_timer);
     clearTimeout(queen_notice_timer);
+    clearTimeout(ai_turn_timer);
     clearInterval(tutorial_animation_timer);
 };
 
@@ -458,6 +482,8 @@ const reset_game_state = function () {
     if (result_dialog.open) {
         result_dialog.close();
     }
+
+    single_player_dialog.classList.add("hidden");
 
     game_board.offsetHeight;
 
@@ -731,12 +757,57 @@ const tutorial_click = function () {
 const is_click_on_tutorial_control = function (event) {
     return (
         event.target === tutorial_control_button ||
-        tutorial_control_button.contains(event.target)
+        tutorial_control_button.contains(event.target) ||
+        event.target === single_player_button ||
+        single_player_button.contains(event.target)
     );
 };
 
 const suppress_tutorial_followup_click = function () {
     tutorial_click_suppressed_until = Date.now() + 350;
+};
+
+const update_player_names_for_mode = function () {
+    if (play_mode === "multiplayer") {
+        el("home_name").value = "Player 1";
+        el("away_name").value = "Player 2";
+        single_player_button.textContent = "Single Player";
+        return;
+    }
+
+    single_player_button.textContent = "Multiplayer";
+
+    if (human_side === "white") {
+        el("home_name").value = "Player 1";
+        el("away_name").value = "AI";
+        return;
+    }
+
+    el("home_name").value = "AI";
+    el("away_name").value = "Player 1";
+};
+
+const restart_match = function () {
+    update_player_names_for_mode();
+    reset_game_state();
+    tutorial_active = false;
+    tutorial_phase = "completed";
+    tutorial_focus = "none";
+    hide_tutorial_layers();
+    start_opening_animation();
+};
+
+const start_single_player = function (side) {
+    play_mode = "single_player";
+    human_side = side;
+    single_player_dialog.classList.add("hidden");
+    restart_match();
+};
+
+const return_to_multiplayer = function () {
+    play_mode = "multiplayer";
+    human_side = "white";
+    restart_match();
 };
 
 const consume_tutorial_followup_click = function (event) {
@@ -750,6 +821,40 @@ const consume_tutorial_followup_click = function (event) {
 
     return true;
 };
+
+tutorial_control_button.onclick = function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (tutorial_active) {
+        skip_tutorial_to_game();
+        return;
+    }
+
+    start_tutorial_at_duel_intro();
+};
+
+single_player_button.onclick = function () {
+    if (play_mode === "single_player") {
+        return_to_multiplayer();
+        return;
+    }
+
+    single_player_dialog.classList.remove("hidden");
+};
+
+single_player_dialog.addEventListener("click", function (event) {
+    const choice_button = event.target.closest("[data-side]");
+
+    if (choice_button !== null) {
+        start_single_player(choice_button.dataset.side);
+        return;
+    }
+
+    if (event.target === single_player_dialog) {
+        single_player_dialog.classList.add("hidden");
+    }
+});
 
 document.addEventListener("pointerdown", function (event) {
     if (!tutorial_active) {
@@ -802,20 +907,12 @@ document.addEventListener("pointerup", function (event) {
 });
 
 document.addEventListener("click", function (event) {
-    consume_tutorial_followup_click(event);
-}, true);
-
-tutorial_control_button.onclick = function (event) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (tutorial_active) {
-        skip_tutorial_to_game();
+    if (single_player_dialog.contains(event.target)) {
         return;
     }
 
-    start_tutorial_at_duel_intro();
-};
+    consume_tutorial_followup_click(event);
+}, true);
 
 const direction_step = function (value) {
     if (value > 0) {
@@ -1636,8 +1733,17 @@ const is_tutorial_focus_square = function (position) {
     );
 };
 
+const is_human_side = function (side) {
+    return play_mode === "multiplayer" || human_side === side;
+};
+
+const is_ai_side = function (side) {
+    return play_mode === "single_player" && human_side !== side;
+};
+
 const is_player_one_turn = function () {
     return (
+        is_human_side("white") &&
         game.result === "playing" &&
         game.phase === "move_king" &&
         !opening_active &&
@@ -1650,6 +1756,7 @@ const is_player_one_turn = function () {
 
 const is_player_two_piece_turn = function () {
     return (
+        is_human_side("black") &&
         game.result === "playing" &&
         game.phase === "place_piece" &&
         !opening_active &&
@@ -1662,6 +1769,7 @@ const is_player_two_piece_turn = function () {
 
 const is_player_two_queen_turn = function () {
     return (
+        is_human_side("black") &&
         game.result === "playing" &&
         game.phase === "move_queen" &&
         game.queen_active &&
@@ -1675,6 +1783,32 @@ const is_player_two_queen_turn = function () {
 
 const is_queens_wrath_turn = function () {
     return is_player_two_queen_turn() && queens_wrath_active;
+};
+
+const is_ai_ready_to_move = function () {
+    return (
+        play_mode === "single_player" &&
+        game.result === "playing" &&
+        !tutorial_active &&
+        !opening_active &&
+        !pawn_wave_active &&
+        !royal_guard_arrival_active &&
+        !queen_arrival_active &&
+        !input_locked &&
+        (
+            (
+                is_ai_side("white") &&
+                game.phase === "move_king"
+            ) ||
+            (
+                is_ai_side("black") &&
+                (
+                    game.phase === "place_piece" ||
+                    game.phase === "move_queen"
+                )
+            )
+        )
+    );
 };
 
 const ghost_token = function () {
@@ -2694,7 +2828,7 @@ const update_tutorial_ability_demo = function () {
             tutorial_phase === "rule_place_piece" &&
             tutorial_place_elapsed() >= tutorial_place_click_time + 1800
         ) {
-            el("queen_progress_status").textContent = "1/12";
+            el("queen_progress_status").textContent = `1/${game.target_turns}`;
             el("queen_progress_fill").style.width = `${100 / game.target_turns}%`;
         }
 
@@ -2823,7 +2957,8 @@ const update_eagle_vision_button = function () {
         eagle_vision_charge >= eagle_vision_max_charge &&
         game.result === "playing" &&
         game.phase === "move_king" &&
-        !input_locked
+        !input_locked &&
+        is_human_side("white")
     );
 
     el("eagle_vision_fill").style.width = `${charge_percentage}%`;
@@ -2857,7 +2992,8 @@ const update_royal_jump_button = function () {
         royal_jump_charge >= royal_jump_max_charge &&
         game.result === "playing" &&
         game.phase === "move_king" &&
-        !input_locked
+        !input_locked &&
+        is_human_side("white")
     );
 
     el("royal_jump_fill").style.width = `${charge_percentage}%`;
@@ -2949,6 +3085,87 @@ const charge_abilities_after_king_move = function () {
         royal_jump_charge,
         royal_jump_max_charge
     );
+};
+
+const apply_ai_king_move = function () {
+    const choice = KingCrossing.choose_ai_king_move(game);
+
+    if (choice === undefined) {
+        return;
+    }
+
+    const previous_phase = game.phase;
+    const previous_turn = game.turn;
+
+    game = KingCrossing.move_king_to(game, choice.position);
+
+    if (
+        previous_phase === "move_king" &&
+        (
+            game.phase !== previous_phase ||
+            game.turn !== previous_turn ||
+            game.result !== "playing"
+        )
+    ) {
+        charge_abilities_after_king_move();
+    }
+};
+
+const apply_ai_black_move = function () {
+    if (game.phase === "place_piece") {
+        const choice = KingCrossing.choose_ai_piece_placement(game);
+
+        if (choice !== undefined) {
+            game = KingCrossing.place_piece(game, choice.column);
+            reveal_queen_meter_after_first_piece();
+        }
+        return;
+    }
+
+    if (game.phase === "move_queen") {
+        const choice = KingCrossing.choose_ai_queen_action(game);
+
+        if (choice === undefined) {
+            return;
+        }
+
+        if (choice.type === "spawn_wrath_rook") {
+            game = KingCrossing.spawn_wrath_rook(game, choice.position);
+            return;
+        }
+
+        game = KingCrossing.move_queen_to(game, choice.position);
+    }
+};
+
+const perform_ai_turn = function () {
+    ai_turn_timer = undefined;
+
+    if (!is_ai_ready_to_move()) {
+        return;
+    }
+
+    input_locked = true;
+    hovered_column = undefined;
+    hovered_position = undefined;
+
+    if (is_ai_side("white") && game.phase === "move_king") {
+        apply_ai_king_move();
+    } else {
+        apply_ai_black_move();
+    }
+
+    input_locked = false;
+    redraw_board();
+    start_pawn_wave_if_needed();
+};
+
+const schedule_ai_turn_if_needed = function () {
+    if (!is_ai_ready_to_move() || ai_turn_timer !== undefined) {
+        return;
+    }
+
+    ai_turn_timer = setTimeout(perform_ai_turn, 650);
 };
 
 const board_cells = range(0, game.width).map(function (column_index) {
@@ -3337,6 +3554,8 @@ const redraw_board = function () {
                 "Queen's Wrath: place a rook that does not directly check " +
                 "the king."
             );
+        } else if (is_ai_side("black")) {
+            el("away_ready").textContent = "AI is choosing a Black move.";
         } else {
             el("away_ready").textContent = (
                 "Black Pieces: move the queen, or press Tab for Queen's Wrath."
@@ -3348,12 +3567,21 @@ const redraw_board = function () {
         );
         el("away_ready").textContent = "The Grand Regent Queen controls the board.";
     } else if (game.phase === "place_piece" && game.result === "playing") {
-        el("home_ready").textContent = "White Pieces: wait for Black.";
+        el("home_ready").textContent = (
+            is_ai_side("black")
+            ? "White Pieces: wait for AI."
+            : "White Pieces: wait for Black."
+        );
         el("away_ready").textContent = (
-            `Black Pieces: place a ${next_piece_name()} on the top row.`
+            is_ai_side("black")
+            ? `AI is placing a ${next_piece_name()}.`
+            : `Black Pieces: place a ${next_piece_name()} on the top row.`
         );
     } else if (game.phase === "move_king" && game.result === "playing") {
         el("home_ready").textContent = (
+            is_ai_side("white")
+            ? "AI is guiding the king."
+            :
             royal_jump_available()
             ? "Royal Jump: gold dots show range, not safety."
             : "White Pieces: choose a dot, then press Space."
@@ -3378,6 +3606,7 @@ const redraw_board = function () {
     show_result_if_needed();
     start_royal_guard_arrival_if_needed();
     start_queen_arrival_if_needed();
+    schedule_ai_turn_if_needed();
 };
 
 const finish_opening_animation = function () {
@@ -3833,8 +4062,7 @@ instructions_dialog.onclick = close_instructions;
 instructions_dialog.onkeydown = close_instructions;
 
 const reset_game = function () {
-    reset_game_state();
-    start_opening_animation();
+    restart_match();
 };
 
 result_dialog.onclick = reset_game;

@@ -144,10 +144,10 @@ const make_game = function (
  * @memberof KingCrossing
  * @param {number} [width=8] Grid width
  * @param {number} [height=9] Grid height
- * @param {number} [target_turns=12] Turns until queen arrives
+ * @param {number} [target_turns=7] Turns until queen arrives
  * @returns {Game} New game state
  */
-KingCrossing.create_game = function (width = 8, height = 9, target_turns = 12) {
+KingCrossing.create_game = function (width = 8, height = 9, target_turns = 7) {
     return make_game(
         width,
         height,
@@ -989,6 +989,203 @@ KingCrossing.spawn_wrath_rook = function (game, target_position) {
         game.next_piece,
         undefined
     );
+};
+
+// ============================================================================
+// Single Player AI (strategy decisions, separate from browser controls)
+// ============================================================================
+
+const all_board_positions = function (game) {
+    return Array.from({length: game.width}, function (_, column) {
+        return Array.from({length: game.height}, function (__, row) {
+            return {column, row};
+        });
+    }).flat();
+};
+
+const king_move_offsets_for = function (game) {
+    if (!game.queen_active) {
+        return king_normal_offsets;
+    }
+
+    return Array.from({length: 5}, function (_, column_index) {
+        return Array.from({length: 5}, function (__, row_index) {
+            return {
+                column: column_index - 2,
+                row: row_index - 2
+            };
+        });
+    }).flat().filter(function (offset) {
+        return !(offset.column === 0 && offset.row === 0);
+    });
+};
+
+const legal_king_targets = function (game) {
+    return king_move_offsets_for(game).map(function (offset) {
+        return {
+            column: game.king.column + offset.column,
+            row: game.king.row + offset.row
+        };
+    }).filter(function (position) {
+        return (
+            KingCrossing.is_inside_grid(game, position) &&
+            !KingCrossing.is_pawn_wall(game, position) &&
+            !KingCrossing.is_royal_guard(game, position) &&
+            !queen_at(game, position) &&
+            (
+                piece_at(game, position) === undefined ||
+                !KingCrossing.is_piece_defended(game, position)
+            )
+        );
+    });
+};
+
+KingCrossing.legal_king_targets = function (game) {
+    return legal_king_targets(game).map(copy_position);
+};
+
+KingCrossing.legal_placement_columns = function (game) {
+    return legal_placement_columns(game);
+};
+
+KingCrossing.legal_queen_targets = function (game) {
+    return all_board_positions(game).filter(function (position) {
+        return KingCrossing.is_queen_move_legal(game, position);
+    }).map(copy_position);
+};
+
+KingCrossing.legal_wrath_targets = function (game) {
+    return all_board_positions(game).filter(function (position) {
+        return KingCrossing.can_spawn_wrath_rook(game, position);
+    }).map(copy_position);
+};
+
+const center_pressure_score = function (game, column) {
+    const center = (game.width - 1) / 2;
+    return game.width - Math.abs(column - center);
+};
+
+const king_escape_score = function (game, moved_game, target_position) {
+    if (moved_game.result === "won") {
+        return 10000;
+    }
+
+    if (moved_game.result !== "playing") {
+        return -10000;
+    }
+
+    const captured_piece_bonus = (game.pieces.length - moved_game.pieces.length) * 80;
+    const upward_progress = target_position.row * 30;
+    const forward_bonus = target_position.row > game.king.row ? 120 : 0;
+    const center = (game.width - 1) / 2;
+    const center_bonus = 10 - Math.abs(target_position.column - center) * 3;
+    const danger_penalty = KingCrossing.is_square_attacked(game, target_position)
+        ? 120
+        : 0;
+
+    return (
+        upward_progress +
+        forward_bonus +
+        captured_piece_bonus +
+        center_bonus -
+        danger_penalty
+    );
+};
+
+KingCrossing.choose_ai_king_move = function (game) {
+    return legal_king_targets(game).map(function (target_position) {
+        const moved_game = KingCrossing.move_king_to(game, target_position);
+        return {
+            position: target_position,
+            score: king_escape_score(game, moved_game, target_position)
+        };
+    }).sort(function (first, second) {
+        return second.score - first.score;
+    })[0];
+};
+
+const placement_pressure_score = function (game, placed_game, column) {
+    if (placed_game.result === "sealed") {
+        return 10000;
+    }
+
+    const top_position = {column, row: game.height - 1};
+    const piece = make_piece(game.next_piece, column, game.height - 1);
+    const direct_attack = attacks_from(placed_game, piece).some(function (attack) {
+        return same_position(attack, game.king);
+    }) ? 300 : 0;
+    const file_pressure = game.width - Math.abs(column - game.king.column);
+    const center_bonus = center_pressure_score(game, column);
+    const blocked_top_bonus = placed_game.pieces.length * 8;
+    const pawn_wall_bonus = top_position.row - game.king.row;
+
+    return (
+        direct_attack +
+        file_pressure * 18 +
+        center_bonus * 8 +
+        blocked_top_bonus +
+        pawn_wall_bonus
+    );
+};
+
+KingCrossing.choose_ai_piece_placement = function (game) {
+    return legal_placement_columns(game).map(function (column) {
+        const placed_game = KingCrossing.place_piece(game, column);
+        return {
+            column,
+            score: placement_pressure_score(game, placed_game, column)
+        };
+    }).sort(function (first, second) {
+        return second.score - first.score;
+    })[0];
+};
+
+const queen_move_pressure_score = function (game, target_position) {
+    const moved_game = KingCrossing.move_queen_to(game, target_position);
+    const checks_king = KingCrossing.is_king_in_check(moved_game) ? 800 : 0;
+    const distance_to_king = (
+        Math.abs(target_position.column - game.king.column) +
+        Math.abs(target_position.row - game.king.row)
+    );
+    const escape_routes = legal_king_targets(moved_game).length;
+
+    return checks_king + (20 - distance_to_king) * 20 - escape_routes * 35;
+};
+
+const wrath_pressure_score = function (game, target_position) {
+    const spawned_game = KingCrossing.spawn_wrath_rook(game, target_position);
+    const escape_routes = legal_king_targets(spawned_game).length;
+    const distance_to_king = (
+        Math.abs(target_position.column - game.king.column) +
+        Math.abs(target_position.row - game.king.row)
+    );
+
+    return 350 + (20 - distance_to_king) * 15 - escape_routes * 45;
+};
+
+KingCrossing.choose_ai_queen_action = function (game) {
+    const queen_moves = KingCrossing.legal_queen_targets(game).map(
+        function (position) {
+            return {
+                type: "move_queen",
+                position,
+                score: queen_move_pressure_score(game, position)
+            };
+        }
+    );
+    const wrath_moves = KingCrossing.legal_wrath_targets(game).map(
+        function (position) {
+            return {
+                type: "spawn_wrath_rook",
+                position,
+                score: wrath_pressure_score(game, position)
+            };
+        }
+    );
+
+    return queen_moves.concat(wrath_moves).sort(function (first, second) {
+        return second.score - first.score;
+    })[0];
 };
 
 // ============================================================================

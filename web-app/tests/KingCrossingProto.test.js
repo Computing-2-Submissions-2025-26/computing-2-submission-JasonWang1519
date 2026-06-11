@@ -23,7 +23,7 @@ describe("King's Crossing", function () {
         );
     });
 
-    it("cycles Player 2 pieces through pawn, knight, and bishop", function () {
+    it("cycles Black Pieces through pawn, knight, and bishop", function () {
         let game = KingCrossing.create_game();
 
         game = KingCrossing.place_piece(game, 0);
@@ -92,6 +92,34 @@ describe("King's Crossing", function () {
         assert.equal(
             KingCrossing.can_spawn_wrath_rook(game, {column: 0, row: 8}),
             false
+        );
+    });
+
+    it("chooses a legal AI placement for Black Pieces", function () {
+        const game = KingCrossing.create_game();
+        const choice = KingCrossing.choose_ai_piece_placement(game);
+
+        assert.equal(
+            KingCrossing.can_place_piece(game, choice.column),
+            true
+        );
+    });
+
+    it("chooses a legal AI king move for White Pieces", function () {
+        let game = KingCrossing.create_game();
+        game = KingCrossing.place_piece(game, 4);
+
+        const choice = KingCrossing.choose_ai_king_move(game);
+        const legal_targets = KingCrossing.legal_king_targets(game);
+
+        assert.equal(
+            legal_targets.some(function (target) {
+                return (
+                    target.column === choice.position.column &&
+                    target.row === choice.position.row
+                );
+            }),
+            true
         );
     });
 });
