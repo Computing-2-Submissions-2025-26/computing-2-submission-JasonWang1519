@@ -4,7 +4,7 @@
     },
     "source": {
         "include": [
-            "web-app/KingCrossingF1.js"
+            "web-app/KingCrossing.js"
         ],
         "includePattern": "\\.js$",
         "excludePattern": "(node_modules/|docs)"

@@ -107,6 +107,7 @@ main
     line-height: normal;
     max-height: none;
     max-width: 96%;
+    --board-scroll-end: 0%;
     transform: translateY(calc(-100% / 11));
     transition: transform 450ms ease-in-out;
     white-space: nowrap;
@@ -114,7 +115,7 @@ main
 
 #game_board.board_scroll_animation
 {
-    transform: translateY(0);
+    transform: translateY(var(--board-scroll-end));
 }
 
 #game_board.no_scroll_transition
@@ -287,14 +288,14 @@ main
 .queens_wrath_hint::after
 {
     background: #111111cc;
-    border: 2px solid var(--queen-gold);
-    box-shadow: 0 0 10px var(--queen-gold);
+    border-radius: 50%;
+    box-shadow: 0 0 9px var(--queen-gold);
     content: "";
-    height: 18%;
-    left: 41%;
+    height: 14%;
+    left: 43%;
     position: absolute;
-    top: 41%;
-    width: 18%;
+    top: 43%;
+    width: 14%;
     z-index: 2;
 }
 
@@ -1318,6 +1319,36 @@ aside > *
     font-size: 11pt;
     left: 1.45em;
     position: absolute;
+}
+
+#tutorial_notice
+{
+    background: #262522f5;
+    border: 2px solid #ffffff;
+    border-radius: 14px;
+    box-shadow:
+        0 0 24px #000000dd,
+        0 0 22px #f7df6faa;
+    color: #ffffff;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 18pt;
+    font-weight: bold;
+    left: 50%;
+    line-height: 1.24;
+    max-width: min(520px, calc(100vw - 48px));
+    padding: 0.9em 1.1em;
+    pointer-events: none;
+    position: fixed;
+    text-align: center;
+    text-shadow: 0 0 12px #000000;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2800;
+}
+
+#tutorial_notice.hidden
+{
+    display: none;
 }
 
 .tutorial_practice_mode #tutorial_text::after

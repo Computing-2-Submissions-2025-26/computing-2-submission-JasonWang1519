@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import KingCrossing from "../KingCrossingF1.js";
+import KingCrossing from "../KingCrossing.js";
 
 const final_duel_game = function () {
     let game = KingCrossing.create_game();
@@ -23,6 +23,45 @@ const explain_game = function (game) {
 const play_countdown_demo_turns = function () {
     let game = KingCrossing.create_game();
     let safety_counter = 0;
+
+    while (
+        game.result === "playing" &&
+        game.phase !== "royal_guard_arrival" &&
+        safety_counter < 80
+    ) {
+        if (game.phase === "place_piece") {
+            const choice = KingCrossing.choose_countdown_piece_placement(game);
+            game = KingCrossing.place_piece(game, choice.column);
+        } else if (game.phase === "move_king") {
+            const choice = KingCrossing.choose_countdown_king_move(game);
+            game = KingCrossing.move_king_to(
+                game,
+                choice.position,
+                choice.royal_jump === true
+            );
+        } else if (game.phase === "scroll_world") {
+            game = KingCrossing.finish_forward_move(game);
+        }
+
+        safety_counter += 1;
+    }
+
+    return game;
+};
+
+const play_guided_tutorial_countdown = function () {
+    let game = KingCrossing.create_game();
+    let safety_counter = 0;
+
+    game = KingCrossing.place_piece(game, 4);
+    game = KingCrossing.move_king_to(game, {column: 4, row: 3});
+    game = KingCrossing.finish_forward_move(game);
+    game = KingCrossing.place_piece(game, 2);
+    game = KingCrossing.move_king_to(game, {column: 4, row: 3});
+    game = KingCrossing.finish_forward_move(game);
+    game = KingCrossing.place_piece(game, 4);
+    game = KingCrossing.move_king_to(game, {column: 4, row: 4}, true);
+    game = KingCrossing.finish_forward_move(game);
 
     while (
         game.result === "playing" &&
@@ -103,6 +142,28 @@ describe("King's Crossing", function () {
 
         assert.deepEqual(jumped_game.king, jump_square);
         assert.notStrictEqual(jumped_game, game);
+    });
+
+    it("scrolls by the upward distance of a Royal Jump", function () {
+        const game = KingCrossing.place_piece(KingCrossing.create_game(), 0);
+        const jump_square = {column: 4, row: 4};
+        const jumped_game = KingCrossing.move_king_to(
+            game,
+            jump_square,
+            true
+        );
+        const scrolled_game = KingCrossing.finish_forward_move(jumped_game);
+
+        assert.equal(KingCrossing.pending_scroll_rows(jumped_game), 2);
+        assert.deepEqual(
+            scrolled_game.king,
+            {column: 4, row: 2}
+        );
+        assert.equal(
+            scrolled_game.turn,
+            2,
+            "A two-row climb should charge the queen counter by two."
+        );
     });
 
     it("does not advance an ended game", function () {
@@ -321,6 +382,14 @@ describe("King's Crossing", function () {
 
     it("plays the countdown demo through 12 turns without a reset", function () {
         const game = play_countdown_demo_turns();
+
+        assert.equal(game.result, "playing");
+        assert.equal(game.turn, game.target_turns);
+        assert.equal(game.phase, "royal_guard_arrival");
+    });
+
+    it("continues the guided tutorial route into the queen arrival", function () {
+        const game = play_guided_tutorial_countdown();
 
         assert.equal(game.result, "playing");
         assert.equal(game.turn, game.target_turns);

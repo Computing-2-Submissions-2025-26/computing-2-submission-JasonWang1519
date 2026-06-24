@@ -5,7 +5,7 @@
  * decided here.
  *
  * @namespace KingCrossing
- * @version King's Crossing F1
+ * @version King's Crossing
  */
 const KingCrossing = Object.create(null);
 
@@ -41,6 +41,7 @@ const KingCrossing = Object.create(null);
  * @property {number} dodge_moves Sideways moves made before Black acts again.
  * @property {string} next_piece The next piece in Black's placement cycle.
  * @property {Piece|undefined} attacker The piece that ended the game.
+ * @property {number} pending_scroll_rows Rows waiting to scroll after a forward move.
  */
 
 const EMPTY = "empty";
@@ -61,6 +62,7 @@ const PAWN_WALL_ROW = 0;
 const PAWN_WALL_DANGER_ROW = 1;
 const FIRST_TURN = 0;
 const NO_DODGES = 0;
+const NO_PENDING_SCROLL = 0;
 const QUEEN_ENTRY_ROW_OFFSET = 3;
 const ROYAL_GUARD_ESCAPE_ROW_OFFSET = 2;
 const MAXIMUM_DODGE_MOVES = 2;
@@ -171,7 +173,8 @@ const make_game = function (
     result,
     dodge_moves_remaining,
     next_piece_type,
-    attacker
+    attacker,
+    pending_scroll_rows = NO_PENDING_SCROLL
 ) {
     return Object.freeze({
         width,
@@ -187,7 +190,8 @@ const make_game = function (
         result,
         dodge_moves: dodge_moves_remaining,
         next_piece: next_piece_type,
-        attacker: attacker ? copy_piece(attacker) : undefined
+        attacker: attacker ? copy_piece(attacker) : undefined,
+        pending_scroll_rows
     });
 };
 
@@ -494,6 +498,26 @@ const game_with_phase = function (game, phase) {
     );
 };
 
+const game_with_scroll_world = function (game, scroll_rows) {
+    return make_game(
+        game.width,
+        game.height,
+        game.king,
+        game.pieces,
+        game.queen,
+        game.queen_active,
+        game.royal_guard_active,
+        game.turn,
+        game.target_turns,
+        "scroll_world",
+        game.result,
+        game.dodge_moves,
+        game.next_piece,
+        game.attacker,
+        scroll_rows
+    );
+};
+
 const game_with_result = function (game, result, attacker) {
     return make_game(
         game.width,
@@ -762,15 +786,17 @@ KingCrossing.finish_forward_move = function (game) {
         return game;
     }
 
+    const scroll_rows = Math.max(1, game.pending_scroll_rows || 1);
+
     const scrolled_pieces = game.pieces.map(
-        (piece) => make_piece(piece.type, piece.column, piece.row - 1)
+        (piece) => make_piece(piece.type, piece.column, piece.row - scroll_rows)
     ).filter(
         (piece) => piece.row > PAWN_WALL_ROW
     );
 
     const scrolled_king = {
         column: game.king.column,
-        row: game.king.row - 1
+        row: game.king.row - scroll_rows
     };
 
     const scrolled_game = make_game(
@@ -781,7 +807,7 @@ KingCrossing.finish_forward_move = function (game) {
         game.queen,
         game.queen_active,
         game.royal_guard_active,
-        game.turn + 1,
+        game.turn + scroll_rows,
         game.target_turns,
         "place_piece",
         game.result,
@@ -806,8 +832,28 @@ KingCrossing.finish_forward_move = function (game) {
     return enter_place_piece_phase(safety_checked);
 };
 
+/**
+ * Get the number of rows waiting to scroll after the king has moved forward.
+ *
+ * @memberof KingCrossing
+ * @function pending_scroll_rows
+ * @param {Game} game The current game state.
+ * @returns {number} The pending scroll distance, or zero outside scroll_world.
+ */
+KingCrossing.pending_scroll_rows = function (game) {
+    if (game.phase !== "scroll_world") {
+        return NO_PENDING_SCROLL;
+    }
+
+    return Math.max(1, game.pending_scroll_rows || 1);
+};
+
+const upward_distance = function (old_position, new_position) {
+    return Math.max(NO_PENDING_SCROLL, new_position.row - old_position.row);
+};
+
 const is_forward_move = function (old_position, new_position) {
-    return new_position.row > old_position.row;
+    return upward_distance(old_position, new_position) > NO_PENDING_SCROLL;
 };
 
 const should_allow_piece_after_dodge = function (game, dodge_moves) {
@@ -900,7 +946,10 @@ KingCrossing.move_king_to = function (
     }
 
     if (is_forward_move(game.king, target_position)) {
-        return game_with_phase(safety_checked, "scroll_world");
+        return game_with_scroll_world(
+            safety_checked,
+            upward_distance(game.king, target_position)
+        );
     }
 
     const next_dodge_moves = safety_checked.dodge_moves + 1;

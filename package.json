@@ -2,8 +2,8 @@
   "name": "kings-crossing",
   "type": "module",
   "version": "1.0.0",
-  "description": "King's Crossing F1, a chess-themed two-player survival game for Computing 2.",
-  "main": "web-app/KingCrossingF1.js",
+  "description": "King's Crossing, a chess-themed two-player survival game for Computing 2.",
+  "main": "web-app/KingCrossing.js",
   "scripts": {
     "test": "mocha",
     "docs": "jsdoc -c jsdoc.json"

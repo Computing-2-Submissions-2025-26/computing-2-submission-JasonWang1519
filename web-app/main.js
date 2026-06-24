@@ -1,5 +1,5 @@
 /*jslint browser */
-import KingCrossing from "./KingCrossingF1.js?v=kings-crossing-f1";
+import KingCrossing from "./KingCrossing.js?v=kings-crossing";
 
 const piece_symbols = [
     "",
@@ -82,6 +82,7 @@ let ai_turn_timer;
 
 let pawn_wave_active = false;
 let pawn_wave_column = -1;
+let pawn_wave_rows = 1;
 let pawn_wave_timer;
 
 let result_timer;
@@ -126,6 +127,7 @@ let tutorial_step_index = 0;
 let tutorial_timer;
 let tutorial_animation_timer;
 let tutorial_fast_forward_timer;
+let tutorial_notice_timer;
 let tutorial_animation_start = 0;
 let tutorial_countdown_turns = 0;
 let tutorial_guided_square = undefined;
@@ -316,6 +318,12 @@ tutorial_text.className = "hidden";
 tutorial_text.setAttribute("aria-live", "polite");
 document.body.append(tutorial_text);
 
+const tutorial_notice = document.createElement("div");
+tutorial_notice.id = "tutorial_notice";
+tutorial_notice.className = "hidden";
+tutorial_notice.setAttribute("aria-live", "assertive");
+document.body.append(tutorial_notice);
+
 const tutorial_queen_countdown = document.createElement("div");
 tutorial_queen_countdown.id = "tutorial_queen_countdown";
 tutorial_queen_countdown.className = "hidden";
@@ -430,7 +438,7 @@ const tutorial_practice_steps = Object.freeze([
         "text": (
             "Player 2 continues the Black Pieces cycle. After the pawn " +
             "comes the knight. A knight protects L-shaped squares, so the " +
-            "gold file lets it defend the pawn from a distance."
+            "outlined file lets it defend the pawn from a distance."
         )
     }),
     Object.freeze({
@@ -480,15 +488,23 @@ const tutorial_practice_steps = Object.freeze([
         )
     }),
     Object.freeze({
+        "phase": "practice_queen_countdown_intro",
+        "focus": "queen_meter",
+        "action": "continue",
+        "text": (
+            "Those turns build toward the Grand Regent Queen. After 12 " +
+            "turns, the board enters the final duel. Click when you are " +
+            "ready to watch the route speed up from here."
+        )
+    }),
+    Object.freeze({
         "phase": "practice_queen_countdown",
         "focus": "queen_meter",
         "action": "watch_queen_countdown",
         "setup": "queen_countdown",
         "text": (
-            "The first stage cannot last forever. After 12 turns, the Grand " +
-            "Regent Queen arrives. Watch one guided route build from slow " +
-            "pressure into the final duel, with White using abilities to " +
-            "stay alive."
+            "The route now accelerates toward turn 12. White keeps climbing " +
+            "and uses abilities when the path gets tight."
         )
     }),
     Object.freeze({
@@ -517,8 +533,18 @@ const tutorial_practice_steps = Object.freeze([
         "focus": "queen_phase",
         "action": "spawn_wrath_rook",
         "text": (
-            "Place the rook on a legal gold square. Use it to close space " +
-            "around the king while the queen still keeps watch."
+            "Call the rook onto the outlined square. It helps Black close " +
+            "space while the queen still keeps watch."
+        )
+    }),
+    Object.freeze({
+        "phase": "practice_complete",
+        "focus": "none",
+        "action": "continue",
+        "setup": "complete_notice",
+        "text": (
+            "You have completed the tutorial. Click anywhere to begin the " +
+            "match."
         )
     })
 ]);
@@ -566,14 +592,23 @@ const clear_tutorial_guided_square = function () {
     set_tutorial_guided_square(undefined);
 };
 
-const show_tutorial_step_message = function (message) {
-    const step = current_practice_step();
+const hide_tutorial_notice = function () {
+    clearTimeout(tutorial_notice_timer);
+    tutorial_notice.classList.add("hidden");
+};
 
-    if (step === undefined) {
+const show_tutorial_notice = function (message, duration = 1800) {
+    clearTimeout(tutorial_notice_timer);
+    tutorial_notice.textContent = message;
+    tutorial_notice.classList.remove("hidden");
+
+    if (duration === 0) {
         return;
     }
 
-    tutorial_text.textContent = `${step.text} ${message}`;
+    tutorial_notice_timer = setTimeout(function () {
+        tutorial_notice.classList.add("hidden");
+    }, duration);
 };
 
 const square_colour_class = function (position) {
@@ -641,6 +676,7 @@ const clear_all_timers = function () {
     clearTimeout(royal_guard_timer);
     clearTimeout(queen_arrival_timer);
     clearTimeout(tutorial_timer);
+    clearTimeout(tutorial_notice_timer);
     clearTimeout(queen_notice_timer);
     clearTimeout(ai_turn_timer);
     clearInterval(tutorial_animation_timer);
@@ -659,6 +695,7 @@ const reset_game_state = function () {
 
     pawn_wave_active = false;
     pawn_wave_column = -1;
+    pawn_wave_rows = 1;
 
     opening_active = false;
     opening_phase = "none";
@@ -685,6 +722,7 @@ const reset_game_state = function () {
     queen_notice_state = "hidden";
     queen_notice.classList.add("hidden");
     queen_notice.classList.remove("queen_notice_fly");
+    hide_tutorial_notice();
 
     hovered_column = undefined;
     hovered_position = undefined;
@@ -722,6 +760,7 @@ const hide_tutorial_layers = function () {
     tutorial_title_screen.classList.add("hidden");
     tutorial_duel_screen.classList.add("hidden");
     tutorial_text.classList.add("hidden");
+    tutorial_notice.classList.add("hidden");
     tutorial_queen_countdown.classList.add("hidden");
     tutorial_slide_number.classList.add("hidden");
     document.body.classList.remove("tutorial_start_mode");
@@ -737,6 +776,7 @@ const hide_tutorial_layers = function () {
     clear_tutorial_guided_square();
     clearInterval(tutorial_animation_timer);
     clearTimeout(tutorial_fast_forward_timer);
+    clearTimeout(tutorial_notice_timer);
 };
 
 const update_tutorial_focus_class = function () {
@@ -901,6 +941,7 @@ const show_current_tutorial_rule = function () {
     const step = tutorial_rule_steps[tutorial_step_index];
 
     tutorial_mode = "classic";
+    hide_tutorial_notice();
     clearInterval(tutorial_animation_timer);
 
     if (step === undefined) {
@@ -952,6 +993,7 @@ const prepare_practice_queen_duel = function () {
 
     pawn_wave_active = false;
     pawn_wave_column = -1;
+    pawn_wave_rows = 1;
     opening_active = false;
     opening_phase = "none";
     royal_guard_arrival_active = false;
@@ -1100,7 +1142,7 @@ const play_one_tutorial_fast_forward_turn = function () {
     }
 
     if (game.turn > previous_turn) {
-        tutorial_countdown_turns += 1;
+        tutorial_countdown_turns = game.turn;
     }
 
     tutorial_countdown_turns = Math.min(
@@ -1120,10 +1162,10 @@ const prepare_practice_queen_countdown = function () {
     clearTimeout(royal_guard_timer);
     clearTimeout(queen_arrival_timer);
 
-    game = KingCrossing.create_game();
     input_locked = true;
     pawn_wave_active = false;
     pawn_wave_column = -1;
+    pawn_wave_rows = 1;
     opening_active = false;
     opening_phase = "none";
     royal_guard_arrival_active = false;
@@ -1133,22 +1175,21 @@ const prepare_practice_queen_countdown = function () {
     hovered_column = undefined;
     hovered_position = undefined;
     queen_notice_state = "panel";
-    tutorial_countdown_turns = 0;
     clear_tutorial_guided_square();
 
     eagle_vision_active = false;
     royal_jump_active = false;
     queens_wrath_active = false;
 
+    if (game.phase === "scroll_world") {
+        game = KingCrossing.finish_forward_move(game);
+    }
+
+    tutorial_countdown_turns = Math.min(game.turn, game.target_turns);
+
     tutorial_queen_countdown.classList.remove("hidden");
     document.body.classList.add("tutorial_countdown_mode");
     update_tutorial_queen_countdown();
-
-    if (game.phase === "scroll_world") {
-        game = KingCrossing.finish_forward_move(game);
-        update_tutorial_queen_countdown();
-        redraw_board();
-    }
 
     tutorial_timer = setTimeout(function () {
         schedule_tutorial_fast_forward_turn();
@@ -1174,6 +1215,14 @@ const apply_practice_step_setup = function (step) {
         prepare_practice_queen_duel();
     }
 
+    if (step.setup === "complete_notice") {
+        tutorial_text.classList.add("hidden");
+        show_tutorial_notice(
+            "Tutorial complete. Congratulations. Click anywhere to begin.",
+            0
+        );
+    }
+
     if (step.action === "place_piece" || step.action === "spawn_wrath_rook") {
         hovered_column = undefined;
         hovered_position = undefined;
@@ -1183,6 +1232,7 @@ const apply_practice_step_setup = function (step) {
 const show_current_practice_step = function () {
     const step = tutorial_practice_steps[tutorial_step_index];
 
+    hide_tutorial_notice();
     clearInterval(tutorial_animation_timer);
     clearTimeout(tutorial_fast_forward_timer);
     clearTimeout(tutorial_timer);
@@ -1681,7 +1731,8 @@ const is_opening_pawn_target_square = function (position) {
 const is_pawn_wave_source_square = function (position) {
     return (
         pawn_wave_active &&
-        position.row === 0 &&
+        position.row >= 0 &&
+        position.row < pawn_wave_rows &&
         position.column <= pawn_wave_column
     );
 };
@@ -1689,7 +1740,8 @@ const is_pawn_wave_source_square = function (position) {
 const is_pawn_wave_target_square = function (position) {
     return (
         pawn_wave_active &&
-        position.row === 1 &&
+        position.row > 0 &&
+        position.row <= pawn_wave_rows &&
         position.column <= pawn_wave_column
     );
 };
@@ -2355,8 +2407,32 @@ const tutorial_recommended_placement_square = function (step) {
     };
 };
 
+const king_square_distance = function (position) {
+    return Math.max(
+        Math.abs(position.column - game.king.column),
+        Math.abs(position.row - game.king.row)
+    );
+};
+
+const king_file_distance = function (position) {
+    return Math.abs(position.column - game.king.column);
+};
+
 const tutorial_recommended_king_square = function () {
     const positions = legal_king_positions();
+    const jump_choices = positions.filter(function (position) {
+        return royal_jump_active && king_square_distance(position) === 2;
+    });
+
+    if (jump_choices.length > 0) {
+        return jump_choices.sort(function (first, second) {
+            return (
+                (second.row - first.row) ||
+                (king_file_distance(first) - king_file_distance(second))
+            );
+        })[0];
+    }
+
     const forward_position = {
         "column": game.king.column,
         "row": game.king.row + 1
@@ -2431,7 +2507,9 @@ const tutorial_accepts_guided_square = function (action, position) {
 };
 
 const remind_guided_square = function () {
-    show_tutorial_step_message("Try the gold square first.");
+    show_tutorial_notice(
+        "For this tutorial, use the outlined square first."
+    );
 };
 
 const tutorial_guided_square_kind = function () {
@@ -3760,6 +3838,7 @@ const start_pawn_wave_if_needed = function () {
     input_locked = true;
     pawn_wave_active = true;
     pawn_wave_column = -1;
+    pawn_wave_rows = KingCrossing.pending_scroll_rows(game);
 
     pawn_wave_timer = setTimeout(
         continue_pawn_wave,
@@ -4027,6 +4106,11 @@ const start_queen_arrival_if_needed = function () {
 
 const redraw_board = function () {
     update_player_names_for_mode();
+    tutorial_control_button.textContent = (
+        tutorial_active
+        ? "Skip tutorial"
+        : "Tutorial"
+    );
 
     document.body.classList.toggle(
         "tutorial_board_focus_mode",
@@ -4088,8 +4172,7 @@ const redraw_board = function () {
         el("home_ready").textContent = "White Pieces: survive the queen.";
         if (queens_wrath_active) {
             el("away_ready").textContent = (
-                "Queen's Wrath: place a rook that does not directly check " +
-                "the king."
+                "Queen's Wrath: call a rook onto an open safe square."
             );
         } else if (is_ai_side("black")) {
             el("away_ready").textContent = "AI is choosing a Black move.";
@@ -4241,9 +4324,11 @@ const start_opening_animation = function () {
 const finish_board_scroll_animation = function () {
     game_board.classList.add("no_scroll_transition");
     game_board.classList.remove("board_scroll_animation");
+    game_board.style.setProperty("--board-scroll-end", "0%");
 
     pawn_wave_active = false;
     pawn_wave_column = -1;
+    pawn_wave_rows = 1;
 
     game = KingCrossing.finish_forward_move(game);
     input_locked = false;
@@ -4257,7 +4342,19 @@ const finish_board_scroll_animation = function () {
 };
 
 const start_board_scroll_animation = function () {
+    const row_count = (
+        game.height +
+        visual_extra_top_rows +
+        visual_extra_bottom_rows
+    );
+    const scroll_rows = KingCrossing.pending_scroll_rows(game);
+    const scroll_end_percent = ((scroll_rows - 1) * 100) / row_count;
+
     game_board.classList.remove("no_scroll_transition");
+    game_board.style.setProperty(
+        "--board-scroll-end",
+        `${scroll_end_percent}%`
+    );
     game_board.classList.add("board_scroll_animation");
 
     pawn_wave_timer = setTimeout(

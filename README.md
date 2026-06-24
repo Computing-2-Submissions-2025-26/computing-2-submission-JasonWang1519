@@ -1,6 +1,6 @@
-# King's Crossing F1
+# King's Crossing
 
-King's Crossing F1 is a chess-themed two-player survival game for Computing 2.
+King's Crossing is a chess-themed two-player survival game for Computing 2.
 
 White Pieces guide the king upward through the crossing. Black Pieces place
 threats on the top row and try to close the route before the king escapes. The
@@ -23,7 +23,9 @@ the AI takes the other side.
   a black piece, or into an attacked square.
 - The king can capture a black piece only when that piece is not defended.
 - Eagle Vision reveals dangerous squares when charged.
-- Royal Jump lets the king move up to two squares when charged.
+- Royal Jump lets the king move up to two squares when charged. If the king
+  climbs two rows, the pawn wall advances two rows as well, so the crossing
+  keeps the same pressure.
 - When the queen meter fills, the royal guard blocks the top row and the Grand
   Regent Queen arrives for the final duel. The queen arrives after 12 turns.
 - During the final duel, Black Pieces can press `Tab` to switch between moving
@@ -35,15 +37,15 @@ the AI takes the other side.
 
 ## Project Files
 
-- `web-app/KingCrossingF1.js` contains the pure game rules and state transitions.
-- `web-app/mainF1.js` contains the browser UI, keyboard controls, tutorial, and
+- `web-app/KingCrossing.js` contains the pure game rules and state transitions.
+- `web-app/main.js` contains the browser UI, keyboard controls, tutorial, and
   animations.
-- `web-app/defaultF1.css` contains the board and interface styling.
-- `web-app/tests/KingCrossingF1.test.js` contains focused rule tests.
+- `web-app/default.css` contains the board and interface styling.
+- `web-app/tests/KingCrossing.test.js` contains focused rule tests.
 
 The browser code asks the game module what moves are legal and then redraws the
 interface. The rules for movement, captures, the queen duel, AI choices, and end
-states are kept in `KingCrossingF1.js` so the game can also be played and tested
+states are kept in `KingCrossing.js` so the game can also be played and tested
 from code.
 
 ## Running
