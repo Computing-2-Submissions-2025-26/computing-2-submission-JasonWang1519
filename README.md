@@ -1,6 +1,6 @@
-# King's Crossing
+# King's Crossing F1
 
-King's Crossing is a chess-themed two-player survival game for Computing 2.
+King's Crossing F1 is a chess-themed two-player survival game for Computing 2.
 
 White Pieces guide the king upward through the crossing. Black Pieces place
 threats on the top row and try to close the route before the king escapes. The
@@ -35,11 +35,16 @@ the AI takes the other side.
 
 ## Project Files
 
-- `web-app/KingCrossingProto.js` contains the pure game rules and state transitions.
-- `web-app/mainProto.js` contains the browser UI, keyboard controls, tutorial, and
+- `web-app/KingCrossingF1.js` contains the pure game rules and state transitions.
+- `web-app/mainF1.js` contains the browser UI, keyboard controls, tutorial, and
   animations.
-- `web-app/defaultProto.css` contains the board and interface styling.
-- `web-app/tests/KingCrossingProto.test.js` contains focused rule tests.
+- `web-app/defaultF1.css` contains the board and interface styling.
+- `web-app/tests/KingCrossingF1.test.js` contains focused rule tests.
+
+The browser code asks the game module what moves are legal and then redraws the
+interface. The rules for movement, captures, the queen duel, AI choices, and end
+states are kept in `KingCrossingF1.js` so the game can also be played and tested
+from code.
 
 ## Running
 

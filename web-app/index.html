@@ -2,9 +2,9 @@
 <html lang="en-gb">
 <head>
     <meta charset="utf-8">
-    <title>King's Crossing</title>
-    <link rel="stylesheet" href="defaultProto.css?v=multiplayer-labels-1">
-    <script type="module" src="mainProto.js?v=multiplayer-labels-1"></script>
+    <title>King's Crossing F1</title>
+    <link rel="stylesheet" href="defaultF1.css?v=kings-crossing-f1">
+    <script type="module" src="mainF1.js?v=kings-crossing-f1"></script>
 </head>
 
 <body>
@@ -32,7 +32,9 @@
 
         <div class="game_info">
             <h2 id="home_player_type">White Pieces</h2>
-            <p id="home_ready">The king enters the crossing...</p>
+            <p id="home_ready" aria-live="polite">
+                The king enters the crossing...
+            </p>
         </div>
     </aside>
 
@@ -47,14 +49,16 @@
 
         <div class="game_info">
             <h2 id="away_player_type">Black Pieces</h2>
-            <p id="away_ready">Black is waiting.</p>
+            <p id="away_ready" aria-live="polite">Black is waiting.</p>
         </div>
     </aside>
 
     <dialog id="result_dialog" tabindex="0" aria-label="Game over message">
         <h2>Game Over</h2>
-        <p id="result_message">The crossing has ended.</p>
-        <p id="result_winner">Awaiting result.</p>
+        <p id="result_message" aria-live="assertive">
+            The crossing has ended.
+        </p>
+        <p id="result_winner" aria-live="assertive">Awaiting result.</p>
     </dialog>
 </body>
 </html>

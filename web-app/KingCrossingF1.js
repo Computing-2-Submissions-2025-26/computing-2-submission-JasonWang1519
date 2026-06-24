@@ -1,68 +1,48 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    
-    <meta charset="utf-8">
-    <title>KingCrossingProto.js - Documentation</title>
-    
-    
-    <script src="scripts/prettify/prettify.js"></script>
-    <script src="scripts/prettify/lang-css.js"></script>
-    <!--[if lt IE 9]>
-      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
-    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
-    <script src="scripts/nav.js" defer></script>
-    
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body>
-
-<input type="checkbox" id="nav-trigger" class="nav-trigger" />
-<label for="nav-trigger" class="navicon-button x">
-  <div class="navicon"></div>
-</label>
-
-<label for="nav-trigger" class="overlay"></label>
-
-<nav >
-    
-    
-    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="KingCrossing.html">KingCrossing</a><ul class='methods'><li data-type='method'><a href="KingCrossing.html#.all_attacked_squares">all_attacked_squares</a></li><li data-type='method'><a href="KingCrossing.html#.begin_queen_arrival">begin_queen_arrival</a></li><li data-type='method'><a href="KingCrossing.html#.begin_queen_duel">begin_queen_duel</a></li><li data-type='method'><a href="KingCrossing.html#.can_place_piece">can_place_piece</a></li><li data-type='method'><a href="KingCrossing.html#.can_spawn_wrath_rook">can_spawn_wrath_rook</a></li><li data-type='method'><a href="KingCrossing.html#.cell_token">cell_token</a></li><li data-type='method'><a href="KingCrossing.html#.create_game">create_game</a></li><li data-type='method'><a href="KingCrossing.html#.finish_forward_move">finish_forward_move</a></li><li data-type='method'><a href="KingCrossing.html#.has_legal_piece_placement">has_legal_piece_placement</a></li><li data-type='method'><a href="KingCrossing.html#.is_crossing_sealed">is_crossing_sealed</a></li><li data-type='method'><a href="KingCrossing.html#.is_ended">is_ended</a></li><li data-type='method'><a href="KingCrossing.html#.is_inside_grid">is_inside_grid</a></li><li data-type='method'><a href="KingCrossing.html#.is_king_in_check">is_king_in_check</a></li><li data-type='method'><a href="KingCrossing.html#.is_pawn_wall">is_pawn_wall</a></li><li data-type='method'><a href="KingCrossing.html#.is_pawn_wall_danger">is_pawn_wall_danger</a></li><li data-type='method'><a href="KingCrossing.html#.is_piece_defended">is_piece_defended</a></li><li data-type='method'><a href="KingCrossing.html#.is_queen_move_legal">is_queen_move_legal</a></li><li data-type='method'><a href="KingCrossing.html#.is_royal_guard">is_royal_guard</a></li><li data-type='method'><a href="KingCrossing.html#.is_square_attacked">is_square_attacked</a></li><li data-type='method'><a href="KingCrossing.html#.move_king">move_king</a></li><li data-type='method'><a href="KingCrossing.html#.move_king_to">move_king_to</a></li><li data-type='method'><a href="KingCrossing.html#.move_queen_to">move_queen_to</a></li><li data-type='method'><a href="KingCrossing.html#.piece_type_at">piece_type_at</a></li><li data-type='method'><a href="KingCrossing.html#.place_piece">place_piece</a></li><li data-type='method'><a href="KingCrossing.html#.spawn_wrath_rook">spawn_wrath_rook</a></li><li data-type='method'><a href="KingCrossing.html#.status_message">status_message</a></li></ul></li></ul>
-    
-</nav>
-
-<div id="main">
-    
-    <h1 class="page-title">KingCrossingProto.js</h1>
-    
-
-    
-
-
-
-    
-    <section>
-        <article>
-            <pre class="prettyprint source linenums"><code>/**
- * KingCrossingProto.js - Game logic for King's Crossing
- * A chess-themed survival game where a king flees upward through black-piece territory
- *
- * Domain Concepts:
- * - Grid: The board the king crosses (8 columns × 9 rows)
- * - King: Player 1's piece that must escape
- * - Black Pieces: Pawns, Knights, Bishops, and Queen's Wrath Rooks
- * - Pawn Wall: Advances from below, pursuing the king
- * - Queen: The Grand Regent Queen that appears in the final phase
- * - Royal Guard: White pawns that block the top row before the queen arrives
+/**
+ * KingCrossing is a module for modelling and playing King's Crossing.
+ * It owns the board rules, legal moves, turn phases, and AI choices. The browser
+ * can ask questions about the game or request a move, but the state transition is
+ * decided here.
  *
  * @namespace KingCrossing
- * @version King's Crossing prototype
+ * @version King's Crossing F1
  */
 const KingCrossing = Object.create(null);
 
-// Piece type constants (domain language, not numbers)
+/**
+ * A board square.
+ * @typedef {object} Position
+ * @property {number} column The board column, counted from left to right.
+ * @property {number} row The board row, counted from the pawn wall upward.
+ */
+
+/**
+ * A Black piece, or a temporary attacker used to explain a result.
+ * @typedef {object} Piece
+ * @property {string} type The piece kind.
+ * @property {number} column The current column.
+ * @property {number} row The current row.
+ */
+
+/**
+ * The immutable game state.
+ * @typedef {object} Game
+ * @property {number} width The number of board columns.
+ * @property {number} height The number of visible board rows.
+ * @property {Position} king The White king's square.
+ * @property {Piece[]} pieces Black pieces on the board.
+ * @property {Position|undefined} queen The Grand Regent Queen's square.
+ * @property {boolean} queen_active Whether the final duel has begun.
+ * @property {boolean} royal_guard_active Whether the royal guard blocks the top.
+ * @property {number} turn Completed upward moves.
+ * @property {number} target_turns Turns needed before the queen arrives.
+ * @property {string} phase The current legal action.
+ * @property {string} result The result: playing, won, lost, or sealed.
+ * @property {number} dodge_moves Sideways moves made before Black acts again.
+ * @property {string} next_piece The next piece in Black's placement cycle.
+ * @property {Piece|undefined} attacker The piece that ended the game.
+ */
+
 const EMPTY = "empty";
 const KING = "king";
 const PAWN = "pawn";
@@ -73,7 +53,26 @@ const ROOK = "rook";
 const PAWN_WALL = "pawn_wall";
 const ROYAL_GUARD = "royal_guard";
 
-// Movement patterns (chess rules)
+const DEFAULT_WIDTH = 8;
+const DEFAULT_HEIGHT = 9;
+const DEFAULT_TARGET_TURNS = 12;
+const STARTING_KING_ROW = 2;
+const PAWN_WALL_ROW = 0;
+const PAWN_WALL_DANGER_ROW = 1;
+const FIRST_TURN = 0;
+const NO_DODGES = 0;
+const QUEEN_ENTRY_ROW_OFFSET = 3;
+const MAXIMUM_DODGE_MOVES = 2;
+
+const EMPTY_TOKEN = 0;
+const KING_TOKEN = 1;
+const KNIGHT_TOKEN = 2;
+const PAWN_TOKEN = 3;
+const BISHOP_TOKEN = 4;
+const QUEEN_TOKEN = 5;
+const ROYAL_GUARD_TOKEN = 6;
+const ROOK_TOKEN = 7;
+
 const knight_offsets = Object.freeze([
     {column: -2, row: -1}, {column: -2, row: 1},
     {column: -1, row: -2}, {column: -1, row: 2},
@@ -102,17 +101,30 @@ const king_normal_offsets = Object.freeze([
     {column: -1, row: 0}, {column: 1, row: 0}
 ]);
 
-const MAXIMUM_DODGE_MOVES = 2;
+const countdown_piece_columns = Object.freeze([
+    4, 3, 7, 3, 4, 0, 6, 5, 2, 5, 4, 6
+]);
 
-// ============================================================================
-// Position Operations (domain primitives)
-// ============================================================================
+const countdown_king_routes = Object.freeze([
+    Object.freeze([{column: 3, row: 3}]),
+    Object.freeze([{column: 3, row: 3}]),
+    Object.freeze([{column: 3, row: 3}]),
+    Object.freeze([{column: 4, row: 3}]),
+    Object.freeze([{column: 6, row: 3, royal_jump: true}]),
+    Object.freeze([{column: 6, row: 3}]),
+    Object.freeze([{column: 5, row: 3}]),
+    Object.freeze([{column: 6, row: 3}]),
+    Object.freeze([{column: 5, row: 3}]),
+    Object.freeze([{column: 4, row: 3}]),
+    Object.freeze([{column: 3, row: 3}]),
+    Object.freeze([{column: 2, row: 3}])
+]);
 
 const same_position = function (first, second) {
     return (
-        first !== undefined &amp;&amp;
-        second !== undefined &amp;&amp;
-        first.column === second.column &amp;&amp;
+        first !== undefined &&
+        second !== undefined &&
+        first.column === second.column &&
         first.row === second.row
     );
 };
@@ -123,10 +135,6 @@ const copy_position = function (position) {
     }
     return {column: position.column, row: position.row};
 };
-
-// ============================================================================
-// Piece Operations (domain primitives)
-// ============================================================================
 
 const make_piece = function (type, column, row) {
     return Object.freeze({type, column, row});
@@ -147,10 +155,6 @@ const next_piece_type_after = function (piece_type) {
 
     return PAWN;
 };
-
-// ============================================================================
-// Game State (immutable state object)
-// ============================================================================
 
 const make_game = function (
     width,
@@ -187,69 +191,89 @@ const make_game = function (
 };
 
 /**
- * Create a new game of King's Crossing
+ * Create a new game of King's Crossing.
+ *
  * @memberof KingCrossing
- * @param {number} [width=8] Grid width
- * @param {number} [height=9] Grid height
- * @param {number} [target_turns=12] Turns until queen arrives
- * @returns {Game} New game state
+ * @function create_game
+ * @param {number} [width=8] The number of board columns.
+ * @param {number} [height=9] The number of visible board rows.
+ * @param {number} [target_turns=12] Turns before the queen arrives.
+ * @returns {Game} A fresh immutable game state.
  */
-KingCrossing.create_game = function (width = 8, height = 9, target_turns = 12) {
+KingCrossing.create_game = function (
+    width = DEFAULT_WIDTH,
+    height = DEFAULT_HEIGHT,
+    target_turns = DEFAULT_TARGET_TURNS
+) {
     return make_game(
         width,
         height,
-        {column: Math.floor(width / 2), row: 2},  // King starts center-bottom
-        [],                                        // No black pieces yet
-        undefined,                                 // No queen yet
-        false,                                     // Queen not active
-        false,                                     // Royal guard not active
-        0,                                         // Turn 0
+        {column: Math.floor(width / 2), row: STARTING_KING_ROW},
+        [],
+        undefined,
+        false,
+        false,
+        FIRST_TURN,
         target_turns,
-        "place_piece",                            // Player 2 places first piece
+        "place_piece",
         "playing",
-        0,                                         // No dodges used
-        PAWN,                                     // First piece is pawn
-        undefined                                  // No attacker yet
+        NO_DODGES,
+        PAWN,
+        undefined
     );
 };
 
-// ============================================================================
-// Board Queries (domain questions about the grid)
-// ============================================================================
-
 /**
- * Check if a position is within the grid boundaries
+ * Check if a position is within the board.
+ *
  * @memberof KingCrossing
+ * @function is_inside_grid
+ * @param {Game} game The current game state.
+ * @param {Position} position The square to test.
+ * @returns {boolean} True if the square is on the board.
  */
 KingCrossing.is_inside_grid = function (game, position) {
     return (
-        position.column >= 0 &amp;&amp;
-        position.column &lt; game.width &amp;&amp;
-        position.row >= 0 &amp;&amp;
-        position.row &lt; game.height
+        position.column >= 0 &&
+        position.column < game.width &&
+        position.row >= 0 &&
+        position.row < game.height
     );
 };
 
 /**
- * Check if a position is on the pawn wall (death zone at bottom)
+ * Check if a position is on the pawn wall.
+ *
  * @memberof KingCrossing
+ * @function is_pawn_wall
+ * @param {Game} game The current game state.
+ * @param {Position} position The square to test.
+ * @returns {boolean} True if the square is occupied by the chasing wall.
  */
 KingCrossing.is_pawn_wall = function (game, position) {
-    return position.row === 0;
+    return position.row === PAWN_WALL_ROW;
 };
 
 /**
- * Check if a position is in pawn wall danger (row 1 - attacked by diagonal pawns)
- * Pawns at row 0 attack diagonally upward, making row 1 always dangerous
+ * Check if a position is attacked by the pawn wall.
+ *
  * @memberof KingCrossing
+ * @function is_pawn_wall_danger
+ * @param {Game} game The current game state.
+ * @param {Position} position The square to test.
+ * @returns {boolean} True if pawn wall pawns attack the square.
  */
 KingCrossing.is_pawn_wall_danger = function (game, position) {
-    return position.row === 1;
+    return position.row === PAWN_WALL_DANGER_ROW;
 };
 
 /**
- * Check if the top row is completely filled (crossing sealed)
+ * Check if the top row is completely filled.
+ *
  * @memberof KingCrossing
+ * @function is_crossing_sealed
+ * @param {Game} game The current game state.
+ * @returns {boolean} True if White has no remaining route through the top row.
  */
 KingCrossing.is_crossing_sealed = function (game) {
     return Array.from({length: game.width}, (_, column) => column).every(
@@ -264,16 +288,17 @@ KingCrossing.is_crossing_sealed = function (game) {
 };
 
 /**
- * Check if a position is blocked by the royal guard (top row)
+ * Check if a position is blocked by the royal guard.
+ *
  * @memberof KingCrossing
+ * @function is_royal_guard
+ * @param {Game} game The current game state.
+ * @param {Position} position The square to test.
+ * @returns {boolean} True if the royal guard occupies the square.
  */
 KingCrossing.is_royal_guard = function (game, position) {
-    return game.royal_guard_active &amp;&amp; position.row === game.height - 1;
+    return game.royal_guard_active && position.row === game.height - 1;
 };
-
-// ============================================================================
-// Piece Finding (domain queries about pieces)
-// ============================================================================
 
 const piece_at = function (game, position) {
     return game.pieces.find((piece) => same_position(piece, position));
@@ -281,8 +306,8 @@ const piece_at = function (game, position) {
 
 const queen_at = function (game, position) {
     return (
-        game.queen_active &amp;&amp;
-        game.queen !== undefined &amp;&amp;
+        game.queen_active &&
+        game.queen !== undefined &&
         same_position(game.queen, position)
     );
 };
@@ -298,19 +323,11 @@ const remove_piece_at = function (game, position) {
 };
 
 const pawn_wall_attacker_at = function (position) {
-    // Pawns attack diagonally from row 0
-    // King at position on row 1 is attacked by pawn(s) at diagonal positions
-    // Pick the left diagonal pawn as attacker (or right if on leftmost column)
     if (position.column > 0) {
-        return make_piece(PAWN_WALL, position.column - 1, 0);
+        return make_piece(PAWN_WALL, position.column - 1, PAWN_WALL_ROW);
     }
-    // King at column 0, only right pawn can attack diagonally
-    return make_piece(PAWN_WALL, position.column + 1, 0);
+    return make_piece(PAWN_WALL, position.column + 1, PAWN_WALL_ROW);
 };
-
-// ============================================================================
-// Attack Patterns (chess attack rules)
-// ============================================================================
 
 const knight_attacks_from = function (game, knight) {
     return knight_offsets.map((offset) => ({
@@ -336,9 +353,8 @@ const sliding_attacks_from = function (game, piece, directions, ignore_position)
         while (KingCrossing.is_inside_grid(game, current)) {
             attacks.push(copy_position(current));
 
-            // Stop sliding if we hit a piece (unless it's being ignored)
             if (
-                is_any_piece_at(game, current) &amp;&amp;
+                is_any_piece_at(game, current) &&
                 (ignore_position === undefined || !same_position(current, ignore_position))
             ) {
                 break;
@@ -388,15 +404,19 @@ const attacks_from = function (game, piece, ignore_position) {
 
 const all_attackers = function (game) {
     const attackers = game.pieces.map(copy_piece);
-    if (game.queen_active &amp;&amp; game.queen !== undefined) {
+    if (game.queen_active && game.queen !== undefined) {
         attackers.push(make_piece(QUEEN, game.queen.column, game.queen.row));
     }
     return attackers;
 };
 
 /**
- * Get all squares attacked by black pieces
+ * Get all squares attacked by Black pieces.
+ *
  * @memberof KingCrossing
+ * @function all_attacked_squares
+ * @param {Game} game The current game state.
+ * @returns {Position[]} The attacked board squares.
  */
 KingCrossing.all_attacked_squares = function (game) {
     return all_attackers(game).reduce(
@@ -407,7 +427,7 @@ KingCrossing.all_attacked_squares = function (game) {
 
 const attacker_of_square = function (game, position, ignore_position) {
     return all_attackers(game).find(function (piece) {
-        if (ignore_position !== undefined &amp;&amp; same_position(piece, ignore_position)) {
+        if (ignore_position !== undefined && same_position(piece, ignore_position)) {
             return false;
         }
         return attacks_from(game, piece, ignore_position).some(
@@ -417,32 +437,42 @@ const attacker_of_square = function (game, position, ignore_position) {
 };
 
 /**
- * Check if a square is under attack
+ * Check if a square is under attack.
+ *
  * @memberof KingCrossing
+ * @function is_square_attacked
+ * @param {Game} game The current game state.
+ * @param {Position} position The square to test.
+ * @returns {boolean} True if Black attacks the square.
  */
 KingCrossing.is_square_attacked = function (game, position) {
     return attacker_of_square(game, position) !== undefined;
 };
 
 /**
- * Check if a piece on a square is defended by another piece
+ * Check if a piece on a square is defended by another Black piece.
+ *
  * @memberof KingCrossing
+ * @function is_piece_defended
+ * @param {Game} game The current game state.
+ * @param {Position} position The occupied square to test.
+ * @returns {boolean} True if another Black piece protects that square.
  */
 KingCrossing.is_piece_defended = function (game, position) {
     return attacker_of_square(game, position, position) !== undefined;
 };
 
 /**
- * Check if the king is in check (under attack)
+ * Check if the king is in check.
+ *
  * @memberof KingCrossing
+ * @function is_king_in_check
+ * @param {Game} game The current game state.
+ * @returns {boolean} True if the active queen or Black pieces attack the king.
  */
 KingCrossing.is_king_in_check = function (game) {
-    return game.queen_active &amp;&amp; attacker_of_square(game, game.king) !== undefined;
+    return game.queen_active && attacker_of_square(game, game.king) !== undefined;
 };
-
-// ============================================================================
-// Game State Transitions (phase changes)
-// ============================================================================
 
 const game_with_phase = function (game, phase) {
     return make_game(
@@ -499,18 +529,29 @@ const begin_royal_guard_arrival = function (game) {
 };
 
 /**
- * Begin the queen arrival phase (queen removes failed black pieces)
+ * Begin the queen arrival phase.
+ *
+ * This is a public rule transition so the tutorial can show the moment when the
+ * royal guard appears before the final duel begins.
+ *
  * @memberof KingCrossing
+ * @function begin_queen_arrival
+ * @param {Game} game The current game state.
+ * @returns {Game} The queen arrival state, or the unchanged game if it has ended.
  */
 KingCrossing.begin_queen_arrival = function (game) {
+    if (game.result !== "playing") {
+        return game;
+    }
+
     return make_game(
         game.width,
         game.height,
         game.king,
         game.pieces,
         game.queen,
-        false,  // Queen not active yet during arrival
-        true,   // Royal guard stays
+        false,
+        true,
         game.turn,
         game.target_turns,
         "queen_arrival",
@@ -522,62 +563,63 @@ KingCrossing.begin_queen_arrival = function (game) {
 };
 
 /**
- * Begin the final queen duel phase
+ * Begin the final queen duel.
+ *
  * @memberof KingCrossing
+ * @function begin_queen_duel
+ * @param {Game} game The current game state.
+ * @returns {Game} The final duel state, or the unchanged game if it has ended.
  */
 KingCrossing.begin_queen_duel = function (game) {
+    if (game.result !== "playing") {
+        return game;
+    }
+
     return make_game(
         game.width,
         game.height,
         game.king,
-        [],  // Remove all black pieces
-        {column: Math.floor(game.width / 2), row: game.height - 3},  // Queen enters
-        true,  // Queen now active
-        true,  // Royal guard stays
+        [],
+        {
+            column: Math.floor(game.width / 2),
+            row: game.height - QUEEN_ENTRY_ROW_OFFSET
+        },
+        true,
+        true,
         game.turn,
         game.target_turns,
         "move_queen",
         "playing",
-        0,  // Reset dodges
+        NO_DODGES,
         game.next_piece,
         undefined
     );
 };
 
-// ============================================================================
-// King Safety Checks (death conditions)
-// ============================================================================
-
 const check_king_safety_after_move = function (game) {
-    // Death by pawn wall
     if (KingCrossing.is_pawn_wall(game, game.king)) {
         return lose_game(game, undefined);
     }
 
-    // Death by pawn wall danger (diagonal pawn attacks from row 0)
     if (KingCrossing.is_pawn_wall_danger(game, game.king)) {
         const pawn_attacker = pawn_wall_attacker_at(game.king);
         return lose_game(game, pawn_attacker);
     }
 
-    // Death by royal guard
     if (KingCrossing.is_royal_guard(game, game.king)) {
         return lose_game(game, undefined);
     }
 
-    // Death by stepping on queen
     if (queen_at(game, game.king)) {
         const queen_piece = make_piece(QUEEN, game.queen.column, game.queen.row);
         return lose_game(game, queen_piece);
     }
 
-    // Death by stepping on piece
     const standing_piece = piece_at(game, game.king);
     if (standing_piece !== undefined) {
         return lose_game(game, standing_piece);
     }
 
-    // Death by being attacked
     const checking_piece = attacker_of_square(game, game.king);
     if (checking_piece !== undefined) {
         return lose_game(game, checking_piece);
@@ -586,16 +628,12 @@ const check_king_safety_after_move = function (game) {
     return game;
 };
 
-// ============================================================================
-// Piece Placement (Player 2 action)
-// ============================================================================
-
 const legal_placement_columns = function (game) {
     return Array.from({length: game.width}, (_, column) => column).filter(
         function (column) {
             const top_position = {column, row: game.height - 1};
             return (
-                !is_any_piece_at(game, top_position) &amp;&amp;
+                !is_any_piece_at(game, top_position) &&
                 !same_position(game.king, top_position)
             );
         }
@@ -603,8 +641,12 @@ const legal_placement_columns = function (game) {
 };
 
 /**
- * Check if there are legal columns to place a piece
+ * Check if Black can place the next piece anywhere.
+ *
  * @memberof KingCrossing
+ * @function has_legal_piece_placement
+ * @param {Game} game The current game state.
+ * @returns {boolean} True if the top row has a legal square.
  */
 KingCrossing.has_legal_piece_placement = function (game) {
     return legal_placement_columns(game).length > 0;
@@ -623,12 +665,11 @@ const enter_place_piece_phase = function (game) {
         game.target_turns,
         "place_piece",
         game.result,
-        0,  // Reset dodge moves
+        NO_DODGES,
         game.next_piece,
         undefined
     );
 
-    // If no legal placements, Player 2 loses (sealed crossing)
     if (!KingCrossing.has_legal_piece_placement(placement_game)) {
         return sealed_game(placement_game);
     }
@@ -637,27 +678,37 @@ const enter_place_piece_phase = function (game) {
 };
 
 /**
- * Check if a piece can be placed in a column
+ * Check if Black can place the next piece in a column.
+ *
  * @memberof KingCrossing
+ * @function can_place_piece
+ * @param {Game} game The current game state.
+ * @param {number} column The top-row column to test.
+ * @returns {boolean} True if a piece can be placed there.
  */
 KingCrossing.can_place_piece = function (game, column) {
     const top_position = {column, row: game.height - 1};
 
     return (
-        game.result === "playing" &amp;&amp;
-        game.phase === "place_piece" &amp;&amp;
-        !game.queen_active &amp;&amp;
-        !game.royal_guard_active &amp;&amp;
-        column >= 0 &amp;&amp;
-        column &lt; game.width &amp;&amp;
-        !is_any_piece_at(game, top_position) &amp;&amp;
+        game.result === "playing" &&
+        game.phase === "place_piece" &&
+        !game.queen_active &&
+        !game.royal_guard_active &&
+        column >= 0 &&
+        column < game.width &&
+        !is_any_piece_at(game, top_position) &&
         !same_position(game.king, top_position)
     );
 };
 
 /**
- * Place a black piece on the top row
+ * Place Black's next piece on the top row.
+ *
  * @memberof KingCrossing
+ * @function place_piece
+ * @param {Game} game The current game state.
+ * @param {number} column The top-row column to use.
+ * @returns {Game} The new game, or the unchanged game if the move is illegal.
  */
 KingCrossing.place_piece = function (game, column) {
     if (!KingCrossing.can_place_piece(game, column)) {
@@ -680,14 +731,13 @@ KingCrossing.place_piece = function (game, column) {
         game.royal_guard_active,
         game.turn,
         game.target_turns,
-        "move_king",  // Now Player 1's turn
+        "move_king",
         game.result,
         game.dodge_moves,
-        next_piece_type_after(game.next_piece),  // Cycle pawn/knight/bishop
+        next_piece_type_after(game.next_piece),
         undefined
     );
 
-    // Check if crossing is now sealed (top row completely full)
     if (KingCrossing.is_crossing_sealed(piece_placed_game)) {
         return sealed_game(piece_placed_game);
     }
@@ -695,23 +745,28 @@ KingCrossing.place_piece = function (game, column) {
     return piece_placed_game;
 };
 
-// ============================================================================
-// Board Scrolling (world advances when king moves forward)
-// ============================================================================
-
 /**
- * Finish the forward move and scroll the world
+ * Finish the king's forward move and scroll the crossing.
+ *
+ * A forward move is split into two phases so the browser can animate the board
+ * before the next Black piece is placed.
+ *
  * @memberof KingCrossing
+ * @function finish_forward_move
+ * @param {Game} game The current game state.
+ * @returns {Game} The scrolled game, or the unchanged game if this is not legal.
  */
 KingCrossing.finish_forward_move = function (game) {
-    // Scroll all pieces down one row
+    if (game.result !== "playing" || game.phase !== "scroll_world") {
+        return game;
+    }
+
     const scrolled_pieces = game.pieces.map(
         (piece) => make_piece(piece.type, piece.column, piece.row - 1)
     ).filter(
-        (piece) => piece.row > 0  // Pieces that hit pawn wall disappear
+        (piece) => piece.row > PAWN_WALL_ROW
     );
 
-    // Scroll king down one row
     const scrolled_king = {
         column: game.king.column,
         row: game.king.row - 1
@@ -725,25 +780,23 @@ KingCrossing.finish_forward_move = function (game) {
         game.queen,
         game.queen_active,
         game.royal_guard_active,
-        game.turn + 1,  // Increment turn
+        game.turn + 1,
         game.target_turns,
         "place_piece",
         game.result,
-        0,  // Reset dodge moves
+        NO_DODGES,
         game.next_piece,
         undefined
     );
 
-    // Check if king died from scrolling
     const safety_checked = check_king_safety_after_move(scrolled_game);
     if (safety_checked.result !== "playing") {
         return safety_checked;
     }
 
-    // Check if we've reached the royal guard phase
     if (
-        !safety_checked.queen_active &amp;&amp;
-        !safety_checked.royal_guard_active &amp;&amp;
+        !safety_checked.queen_active &&
+        !safety_checked.royal_guard_active &&
         safety_checked.turn >= safety_checked.target_turns
     ) {
         return begin_royal_guard_arrival(safety_checked);
@@ -751,10 +804,6 @@ KingCrossing.finish_forward_move = function (game) {
 
     return enter_place_piece_phase(safety_checked);
 };
-
-// ============================================================================
-// King Movement (Player 1 action)
-// ============================================================================
 
 const is_forward_move = function (old_position, new_position) {
     return new_position.row > old_position.row;
@@ -767,16 +816,38 @@ const should_allow_piece_after_dodge = function (game, dodge_moves) {
     return dodge_moves >= MAXIMUM_DODGE_MOVES;
 };
 
+const king_can_reach = function (game, target_position, royal_jump = false) {
+    const column_offset = target_position.column - game.king.column;
+    const row_offset = target_position.row - game.king.row;
+
+    return king_move_offsets_for(game, royal_jump).some(function (offset) {
+        return (
+            offset.column === column_offset &&
+            offset.row === row_offset
+        );
+    });
+};
+
 /**
- * Move the king to a specific square
+ * Move the king to a specific square.
+ *
  * @memberof KingCrossing
+ * @function move_king_to
+ * @param {Game} game The current game state.
+ * @param {Position} target_position The square the king tries to enter.
+ * @param {boolean} [royal_jump=false] Whether Royal Jump is being used.
+ * @returns {Game} The new game, or the unchanged game if the move is illegal.
  */
-KingCrossing.move_king_to = function (game, target_position) {
-    // Validate move legality
+KingCrossing.move_king_to = function (
+    game,
+    target_position,
+    royal_jump = false
+) {
     if (
         game.result !== "playing" ||
         game.phase !== "move_king" ||
         !KingCrossing.is_inside_grid(game, target_position) ||
+        !king_can_reach(game, target_position, royal_jump) ||
         KingCrossing.is_pawn_wall(game, target_position) ||
         KingCrossing.is_royal_guard(game, target_position) ||
         queen_at(game, target_position)
@@ -784,16 +855,14 @@ KingCrossing.move_king_to = function (game, target_position) {
         return game;
     }
 
-    // Can't capture defended pieces
     const target_piece = piece_at(game, target_position);
     if (
-        target_piece !== undefined &amp;&amp;
+        target_piece !== undefined &&
         KingCrossing.is_piece_defended(game, target_position)
     ) {
         return game;
     }
 
-    // Execute move (capture piece if present)
     const updated_pieces = remove_piece_at(game, target_position);
 
     const moved_game = make_game(
@@ -813,39 +882,32 @@ KingCrossing.move_king_to = function (game, target_position) {
         undefined
     );
 
-    // Check if king is safe after moving
     const safety_checked = check_king_safety_after_move(moved_game);
     if (safety_checked.result !== "playing") {
         return safety_checked;
     }
 
-    // Check win condition: reached row below royal guard during queen duel
     if (
-        safety_checked.queen_active &amp;&amp;
+        safety_checked.queen_active &&
         safety_checked.king.row >= safety_checked.height - 2
     ) {
         return win_game(safety_checked);
     }
 
-    // Queen duel: alternate between king and queen moves
     if (safety_checked.queen_active) {
         return game_with_phase(safety_checked, "move_queen");
     }
 
-    // Forward move: scroll the world
     if (is_forward_move(game.king, target_position)) {
         return game_with_phase(safety_checked, "scroll_world");
     }
 
-    // Sideways dodge
     const next_dodge_moves = safety_checked.dodge_moves + 1;
 
-    // After max dodges, give Player 2 another piece
     if (should_allow_piece_after_dodge(safety_checked, next_dodge_moves)) {
         return enter_place_piece_phase(safety_checked);
     }
 
-    // Stay in move_king phase with incremented dodge counter
     return make_game(
         safety_checked.width,
         safety_checked.height,
@@ -865,8 +927,13 @@ KingCrossing.move_king_to = function (game, target_position) {
 };
 
 /**
- * Move the king by direction name
+ * Move the king by direction name.
+ *
  * @memberof KingCrossing
+ * @function move_king
+ * @param {Game} game The current game state.
+ * @param {string} direction One of up_left, up, up_right, left, or right.
+ * @returns {Game} The new game, or the unchanged game if the move is illegal.
  */
 KingCrossing.move_king = function (game, direction) {
     const offset_map = {
@@ -888,10 +955,6 @@ KingCrossing.move_king = function (game, direction) {
     });
 };
 
-// ============================================================================
-// Queen Movement (Player 2 action during duel)
-// ============================================================================
-
 const is_clear_queen_path = function (game, target_position) {
     const column_diff = target_position.column - game.queen.column;
     const row_diff = target_position.row - game.queen.row;
@@ -899,7 +962,7 @@ const is_clear_queen_path = function (game, target_position) {
     const is_straight = column_diff === 0 || row_diff === 0;
     const is_diagonal = Math.abs(column_diff) === Math.abs(row_diff);
 
-    if (!is_straight &amp;&amp; !is_diagonal) {
+    if (!is_straight && !is_diagonal) {
         return false;
     }
 
@@ -911,7 +974,6 @@ const is_clear_queen_path = function (game, target_position) {
         row: game.queen.row + row_step
     };
 
-    // Check all squares between queen and target
     while (!same_position(current, target_position)) {
         if (is_any_piece_at(game, current) || same_position(game.king, current)) {
             return false;
@@ -926,29 +988,39 @@ const is_clear_queen_path = function (game, target_position) {
 };
 
 /**
- * Check if a queen move is legal
+ * Check if the Grand Regent Queen can move to a square.
+ *
  * @memberof KingCrossing
+ * @function is_queen_move_legal
+ * @param {Game} game The current game state.
+ * @param {Position} target_position The square to test.
+ * @returns {boolean} True if the queen has a clear legal route.
  */
 KingCrossing.is_queen_move_legal = function (game, target_position) {
     return (
-        game.result === "playing" &amp;&amp;
-        game.phase === "move_queen" &amp;&amp;
-        game.queen_active &amp;&amp;
-        game.queen !== undefined &amp;&amp;
-        KingCrossing.is_inside_grid(game, target_position) &amp;&amp;
-        !KingCrossing.is_pawn_wall(game, target_position) &amp;&amp;
-        !KingCrossing.is_pawn_wall_danger(game, target_position) &amp;&amp;
-        !KingCrossing.is_royal_guard(game, target_position) &amp;&amp;
-        !is_any_piece_at(game, target_position) &amp;&amp;
-        !same_position(game.king, target_position) &amp;&amp;
-        !same_position(game.queen, target_position) &amp;&amp;
+        game.result === "playing" &&
+        game.phase === "move_queen" &&
+        game.queen_active &&
+        game.queen !== undefined &&
+        KingCrossing.is_inside_grid(game, target_position) &&
+        !KingCrossing.is_pawn_wall(game, target_position) &&
+        !KingCrossing.is_pawn_wall_danger(game, target_position) &&
+        !KingCrossing.is_royal_guard(game, target_position) &&
+        !is_any_piece_at(game, target_position) &&
+        !same_position(game.king, target_position) &&
+        !same_position(game.queen, target_position) &&
         is_clear_queen_path(game, target_position)
     );
 };
 
 /**
- * Move the queen to a target square
+ * Move the Grand Regent Queen to a target square.
+ *
  * @memberof KingCrossing
+ * @function move_queen_to
+ * @param {Game} game The current game state.
+ * @param {Position} target_position The queen's target square.
+ * @returns {Game} The new game, or the unchanged game if the move is illegal.
  */
 KingCrossing.move_queen_to = function (game, target_position) {
     if (!KingCrossing.is_queen_move_legal(game, target_position)) {
@@ -965,7 +1037,7 @@ KingCrossing.move_queen_to = function (game, target_position) {
         game.royal_guard_active,
         game.turn,
         game.target_turns,
-        "move_king",  // Back to king's turn
+        "move_king",
         game.result,
         game.dodge_moves,
         game.next_piece,
@@ -973,14 +1045,16 @@ KingCrossing.move_queen_to = function (game, target_position) {
     );
 };
 
-// ============================================================================
-// Queen's Wrath (Queen ability during the final duel)
-// ============================================================================
-
 /**
  * Check if Queen's Wrath can place a rook on a target square.
+ *
  * The rook must be on a clear board square and cannot immediately check the king.
+ *
  * @memberof KingCrossing
+ * @function can_spawn_wrath_rook
+ * @param {Game} game The current game state.
+ * @param {Position} target_position The square to test.
+ * @returns {boolean} True if Queen's Wrath can use that square.
  */
 KingCrossing.can_spawn_wrath_rook = function (game, target_position) {
     if (
@@ -1011,7 +1085,12 @@ KingCrossing.can_spawn_wrath_rook = function (game, target_position) {
 
 /**
  * Place a Queen's Wrath rook and pass the turn back to Player 1.
+ *
  * @memberof KingCrossing
+ * @function spawn_wrath_rook
+ * @param {Game} game The current game state.
+ * @param {Position} target_position The square for the new rook.
+ * @returns {Game} The new game, or the unchanged game if the square is illegal.
  */
 KingCrossing.spawn_wrath_rook = function (game, target_position) {
     if (!KingCrossing.can_spawn_wrath_rook(game, target_position)) {
@@ -1038,10 +1117,6 @@ KingCrossing.spawn_wrath_rook = function (game, target_position) {
     );
 };
 
-// ============================================================================
-// Single Player AI (strategy decisions, separate from browser controls)
-// ============================================================================
-
 const all_board_positions = function (game) {
     return Array.from({length: game.width}, function (_, column) {
         return Array.from({length: game.height}, function (__, row) {
@@ -1050,8 +1125,8 @@ const all_board_positions = function (game) {
     }).flat();
 };
 
-const king_move_offsets_for = function (game) {
-    if (!game.queen_active) {
+const king_move_offsets_for = function (game, royal_jump = false) {
+    if (!game.queen_active && !royal_jump) {
         return king_normal_offsets;
     }
 
@@ -1063,22 +1138,22 @@ const king_move_offsets_for = function (game) {
             };
         });
     }).flat().filter(function (offset) {
-        return !(offset.column === 0 &amp;&amp; offset.row === 0);
+        return !(offset.column === 0 && offset.row === 0);
     });
 };
 
-const legal_king_targets = function (game) {
-    return king_move_offsets_for(game).map(function (offset) {
+const legal_king_targets = function (game, royal_jump = false) {
+    return king_move_offsets_for(game, royal_jump).map(function (offset) {
         return {
             column: game.king.column + offset.column,
             row: game.king.row + offset.row
         };
     }).filter(function (position) {
         return (
-            KingCrossing.is_inside_grid(game, position) &amp;&amp;
-            !KingCrossing.is_pawn_wall(game, position) &amp;&amp;
-            !KingCrossing.is_royal_guard(game, position) &amp;&amp;
-            !queen_at(game, position) &amp;&amp;
+            KingCrossing.is_inside_grid(game, position) &&
+            !KingCrossing.is_pawn_wall(game, position) &&
+            !KingCrossing.is_royal_guard(game, position) &&
+            !queen_at(game, position) &&
             (
                 piece_at(game, position) === undefined ||
                 !KingCrossing.is_piece_defended(game, position)
@@ -1087,24 +1162,116 @@ const legal_king_targets = function (game) {
     });
 };
 
+/**
+ * Get the legal squares the king can currently move to.
+ *
+ * @memberof KingCrossing
+ * @function legal_king_targets
+ * @param {Game} game The current game state.
+ * @returns {Position[]} Legal king target squares.
+ */
 KingCrossing.legal_king_targets = function (game) {
     return legal_king_targets(game).map(copy_position);
 };
 
+/**
+ * Get the legal columns where Black can place the next piece.
+ *
+ * @memberof KingCrossing
+ * @function legal_placement_columns
+ * @param {Game} game The current game state.
+ * @returns {number[]} Legal top-row columns.
+ */
 KingCrossing.legal_placement_columns = function (game) {
     return legal_placement_columns(game);
 };
 
+/**
+ * Get the legal squares for the Grand Regent Queen.
+ *
+ * @memberof KingCrossing
+ * @function legal_queen_targets
+ * @param {Game} game The current game state.
+ * @returns {Position[]} Legal queen target squares.
+ */
 KingCrossing.legal_queen_targets = function (game) {
     return all_board_positions(game).filter(function (position) {
         return KingCrossing.is_queen_move_legal(game, position);
     }).map(copy_position);
 };
 
+/**
+ * Get the legal squares for a Queen's Wrath rook.
+ *
+ * @memberof KingCrossing
+ * @function legal_wrath_targets
+ * @param {Game} game The current game state.
+ * @returns {Position[]} Legal rook spawn squares.
+ */
 KingCrossing.legal_wrath_targets = function (game) {
     return all_board_positions(game).filter(function (position) {
         return KingCrossing.can_spawn_wrath_rook(game, position);
     }).map(copy_position);
+};
+
+const resolve_king_move = function (game, target_position) {
+    const moved_game = KingCrossing.move_king_to(game, target_position);
+
+    if (moved_game.phase === "scroll_world") {
+        return KingCrossing.finish_forward_move(moved_game);
+    }
+
+    return moved_game;
+};
+
+const is_safe_king_reply = function (game, target_position) {
+    const resolved_game = resolve_king_move(game, target_position);
+
+    return (
+        resolved_game !== game &&
+        resolved_game.result === "playing"
+    );
+};
+
+const safe_king_replies = function (game) {
+    return legal_king_targets(game).filter(function (target_position) {
+        return is_safe_king_reply(game, target_position);
+    });
+};
+
+const is_safe_scripted_king_move = function (game, route_step) {
+    const moved_game = KingCrossing.move_king_to(
+        game,
+        route_step,
+        route_step.royal_jump === true
+    );
+    const resolved_game = (
+        moved_game.phase === "scroll_world"
+        ? KingCrossing.finish_forward_move(moved_game)
+        : moved_game
+    );
+
+    return moved_game !== game && resolved_game.result === "playing";
+};
+
+const scripted_countdown_king_choice = function (game) {
+    const route = countdown_king_routes[game.turn] || [];
+    const route_step = route.find(function (step) {
+        return is_safe_scripted_king_move(game, step);
+    });
+
+    if (route_step === undefined) {
+        return undefined;
+    }
+
+    return {
+        position: {
+            column: route_step.column,
+            row: route_step.row
+        },
+        royal_jump: route_step.royal_jump === true,
+        score: 20000
+    };
 };
 
 const center_pressure_score = function (game, column) {
@@ -1113,11 +1280,17 @@ const center_pressure_score = function (game, column) {
 };
 
 const king_escape_score = function (game, moved_game, target_position) {
-    if (moved_game.result === "won") {
+    const resolved_game = (
+        moved_game.phase === "scroll_world"
+        ? KingCrossing.finish_forward_move(moved_game)
+        : moved_game
+    );
+
+    if (resolved_game.result === "won") {
         return 10000;
     }
 
-    if (moved_game.result !== "playing") {
+    if (resolved_game.result !== "playing") {
         return -10000;
     }
 
@@ -1139,6 +1312,14 @@ const king_escape_score = function (game, moved_game, target_position) {
     );
 };
 
+/**
+ * Choose a White move for the single-player AI.
+ *
+ * @memberof KingCrossing
+ * @function choose_ai_king_move
+ * @param {Game} game The current game state.
+ * @returns {object|undefined} The chosen position and its score.
+ */
 KingCrossing.choose_ai_king_move = function (game) {
     return legal_king_targets(game).map(function (target_position) {
         const moved_game = KingCrossing.move_king_to(game, target_position);
@@ -1151,6 +1332,64 @@ KingCrossing.choose_ai_king_move = function (game) {
     })[0];
 };
 
+/**
+ * Choose a White move for the tutorial countdown.
+ *
+ * This favours moves that keep the demonstration alive until the queen arrives.
+ *
+ * @memberof KingCrossing
+ * @function choose_countdown_king_move
+ * @param {Game} game The current game state.
+ * @returns {object|undefined} The chosen position and its score.
+ */
+KingCrossing.choose_countdown_king_move = function (game) {
+    const scripted_choice = scripted_countdown_king_choice(game);
+
+    if (scripted_choice !== undefined) {
+        return scripted_choice;
+    }
+
+    const safe_choices = safe_king_replies(game).map(function (target_position) {
+        const moved_game = KingCrossing.move_king_to(game, target_position);
+        return {
+            position: target_position,
+            royal_jump: false,
+            score: king_escape_score(game, moved_game, target_position)
+        };
+    });
+
+    if (safe_choices.length === 0) {
+        return KingCrossing.choose_ai_king_move(game);
+    }
+
+    return safe_choices.sort(function (first, second) {
+        return second.score - first.score;
+    })[0];
+};
+
+const piece_route_pressure = function (game, placed_game, piece) {
+    const attacked_squares = attacks_from(placed_game, piece);
+    const king_routes = legal_king_targets(placed_game);
+
+    return king_routes.filter(function (target_position) {
+        return attacked_squares.some(function (attack) {
+            return same_position(attack, target_position);
+        });
+    }).length;
+};
+
+const escape_lane_pressure = function (game, placed_game, piece) {
+    const attacked_squares = attacks_from(placed_game, piece);
+
+    return attacked_squares.filter(function (attack) {
+        return (
+            attack.row >= game.king.row &&
+            attack.row <= game.king.row + 3 &&
+            Math.abs(attack.column - game.king.column) <= 2
+        );
+    }).length;
+};
+
 const placement_pressure_score = function (game, placed_game, column) {
     if (placed_game.result === "sealed") {
         return 10000;
@@ -1158,6 +1397,12 @@ const placement_pressure_score = function (game, placed_game, column) {
 
     const top_position = {column, row: game.height - 1};
     const piece = make_piece(game.next_piece, column, game.height - 1);
+    const safe_replies = safe_king_replies(placed_game);
+    const forward_replies = safe_replies.filter(function (reply) {
+        return reply.row > game.king.row;
+    });
+    const route_pressure = piece_route_pressure(game, placed_game, piece);
+    const lane_pressure = escape_lane_pressure(game, placed_game, piece);
     const direct_attack = attacks_from(placed_game, piece).some(function (attack) {
         return same_position(attack, game.king);
     }) ? 300 : 0;
@@ -1165,9 +1410,15 @@ const placement_pressure_score = function (game, placed_game, column) {
     const center_bonus = center_pressure_score(game, column);
     const blocked_top_bonus = placed_game.pieces.length * 8;
     const pawn_wall_bonus = top_position.row - game.king.row;
+    const trap_pressure = (game.width - safe_replies.length) * 90;
+    const forward_pressure = (game.width - forward_replies.length) * 60;
 
     return (
         direct_attack +
+        trap_pressure +
+        forward_pressure +
+        route_pressure * 100 +
+        lane_pressure * 45 +
         file_pressure * 18 +
         center_bonus * 8 +
         blocked_top_bonus +
@@ -1175,6 +1426,14 @@ const placement_pressure_score = function (game, placed_game, column) {
     );
 };
 
+/**
+ * Choose a Black placement for the single-player AI.
+ *
+ * @memberof KingCrossing
+ * @function choose_ai_piece_placement
+ * @param {Game} game The current game state.
+ * @returns {object|undefined} The chosen column and its score.
+ */
 KingCrossing.choose_ai_piece_placement = function (game) {
     return legal_placement_columns(game).map(function (column) {
         const placed_game = KingCrossing.place_piece(game, column);
@@ -1185,6 +1444,50 @@ KingCrossing.choose_ai_piece_placement = function (game) {
     }).sort(function (first, second) {
         return second.score - first.score;
     })[0];
+};
+
+/**
+ * Choose a Black placement for the tutorial countdown.
+ *
+ * This keeps the accelerated demonstration from accidentally ending early.
+ *
+ * @memberof KingCrossing
+ * @function choose_countdown_piece_placement
+ * @param {Game} game The current game state.
+ * @returns {object|undefined} The chosen column and its score.
+ */
+KingCrossing.choose_countdown_piece_placement = function (game) {
+    const scripted_column = countdown_piece_columns[game.turn];
+
+    if (KingCrossing.can_place_piece(game, scripted_column)) {
+        return {
+            column: scripted_column,
+            score: 20000
+        };
+    }
+
+    const choices = legal_placement_columns(game).map(function (column) {
+        const placed_game = KingCrossing.place_piece(game, column);
+        const safe_replies = safe_king_replies(placed_game).length;
+        const score = placement_pressure_score(game, placed_game, column);
+
+        return {
+            column,
+            score: safe_replies === 0 ? -10000 : score
+        };
+    });
+
+    const playable_choices = choices.filter(function (choice) {
+        return choice.score > -10000;
+    });
+
+    return (
+        playable_choices.length === 0
+        ? KingCrossing.choose_ai_piece_placement(game)
+        : playable_choices.sort(function (first, second) {
+            return second.score - first.score;
+        })[0]
+    );
 };
 
 const queen_move_pressure_score = function (game, target_position) {
@@ -1210,6 +1513,14 @@ const wrath_pressure_score = function (game, target_position) {
     return 350 + (20 - distance_to_king) * 15 - escape_routes * 45;
 };
 
+/**
+ * Choose a queen-duel action for the single-player AI.
+ *
+ * @memberof KingCrossing
+ * @function choose_ai_queen_action
+ * @param {Game} game The current game state.
+ * @returns {object|undefined} The chosen queen move or wrath spawn.
+ */
 KingCrossing.choose_ai_queen_action = function (game) {
     const queen_moves = KingCrossing.legal_queen_targets(game).map(
         function (position) {
@@ -1235,13 +1546,14 @@ KingCrossing.choose_ai_queen_action = function (game) {
     })[0];
 };
 
-// ============================================================================
-// Display / UI Support (domain queries for rendering)
-// ============================================================================
-
 /**
- * Get the piece type at a position (for display)
+ * Get the piece type at a position.
+ *
  * @memberof KingCrossing
+ * @function piece_type_at
+ * @param {Game} game The current game state.
+ * @param {Position} position The square to inspect.
+ * @returns {string} The named piece type at that square.
  */
 KingCrossing.piece_type_at = function (game, position) {
     if (same_position(game.king, position)) {
@@ -1270,36 +1582,42 @@ KingCrossing.piece_type_at = function (game, position) {
 
 const token_for_piece_type = function (piece_type) {
     if (piece_type === KING) {
-        return 1;
+        return KING_TOKEN;
     }
     if (piece_type === PAWN) {
-        return 3;
+        return PAWN_TOKEN;
     }
     if (piece_type === KNIGHT) {
-        return 2;
+        return KNIGHT_TOKEN;
     }
     if (piece_type === PAWN_WALL) {
-        return 3;
+        return PAWN_TOKEN;
     }
     if (piece_type === BISHOP) {
-        return 4;
+        return BISHOP_TOKEN;
     }
     if (piece_type === QUEEN) {
-        return 5;
+        return QUEEN_TOKEN;
     }
     if (piece_type === ROYAL_GUARD) {
-        return 6;
+        return ROYAL_GUARD_TOKEN;
     }
     if (piece_type === ROOK) {
-        return 7;
+        return ROOK_TOKEN;
     }
-    return 0;
+    return EMPTY_TOKEN;
 };
 
 /**
  * Get the display token at a position.
+ *
  * This keeps the browser UI simple while the rule engine uses named pieces.
+ *
  * @memberof KingCrossing
+ * @function cell_token
+ * @param {Game} game The current game state.
+ * @param {Position} position The square to inspect.
+ * @returns {number} A stable display token for the browser.
  */
 KingCrossing.cell_token = function (game, position) {
     return token_for_piece_type(KingCrossing.piece_type_at(game, position));
@@ -1308,16 +1626,24 @@ KingCrossing.cell_token = function (game, position) {
 KingCrossing.is_inside_board = KingCrossing.is_inside_grid;
 
 /**
- * Check if the game has ended
+ * Check if the game has ended.
+ *
  * @memberof KingCrossing
+ * @function is_ended
+ * @param {Game} game The current game state.
+ * @returns {boolean} True if no more moves should be played.
  */
 KingCrossing.is_ended = function (game) {
     return game.result !== "playing";
 };
 
 /**
- * Get a status message for the current game state
+ * Get a status message for the current game state.
+ *
  * @memberof KingCrossing
+ * @function status_message
+ * @param {Game} game The current game state.
+ * @returns {string} A short message suitable for the browser UI.
  */
 KingCrossing.status_message = function (game) {
     const remaining_dodges = MAXIMUM_DODGE_MOVES - game.dodge_moves;
@@ -1364,7 +1690,6 @@ KingCrossing.status_message = function (game) {
     );
 };
 
-// Export piece type constants for UI use
 KingCrossing.EMPTY = EMPTY;
 KingCrossing.KING = KING;
 KingCrossing.KNIGHT = KNIGHT;
@@ -1376,30 +1701,3 @@ KingCrossing.PAWN = PAWN;
 KingCrossing.ROYAL_GUARD = ROYAL_GUARD;
 
 export default Object.freeze(KingCrossing);
-</code></pre>
-        </article>
-    </section>
-
-
-
-
-    
-    
-</div>
-
-<br class="clear">
-
-<footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Thu Jun 11 2026 12:00:42 GMT+0100 (British Summer Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
-</footer>
-
-<script>prettyPrint();</script>
-<script src="scripts/polyfill.js"></script>
-<script src="scripts/linenumber.js"></script>
-
-
-
-    <link type="text/css" rel="stylesheet" href="custom.css">
-    
-</body>
-</html>

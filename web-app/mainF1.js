@@ -1,5 +1,5 @@
 /*jslint browser */
-import KingCrossing from "./KingCrossingProto.js?v=single-player-12";
+import KingCrossing from "./KingCrossingF1.js?v=kings-crossing-f1";
 
 const piece_symbols = [
     "",
@@ -118,13 +118,18 @@ let hovered_position = undefined;
 let queen_notice_state = "hidden";
 let queen_notice_timer;
 
+let tutorial_mode = "practice";
 let tutorial_active = true;
 let tutorial_phase = "title";
 let tutorial_focus = "none";
 let tutorial_step_index = 0;
 let tutorial_timer;
 let tutorial_animation_timer;
+let tutorial_fast_forward_timer;
 let tutorial_animation_start = 0;
+let tutorial_countdown_turns = 0;
+let tutorial_guided_square = undefined;
+let tutorial_guided_kind = "none";
 let tutorial_pointer_down = undefined;
 let tutorial_click_suppressed_until = 0;
 
@@ -155,20 +160,25 @@ const instructions_button = document.createElement("button");
 instructions_button.id = "instructions_button";
 instructions_button.type = "button";
 instructions_button.textContent = "Instructions";
+instructions_button.setAttribute("aria-label", "Open the game instructions");
 document.body.append(instructions_button);
 
 const single_player_button = document.createElement("button");
 single_player_button.id = "single_player_button";
 single_player_button.type = "button";
 single_player_button.textContent = "Single Player";
+single_player_button.setAttribute("aria-label", "Open single-player choices");
 document.body.append(single_player_button);
 
 const single_player_dialog = document.createElement("div");
 single_player_dialog.id = "single_player_dialog";
 single_player_dialog.className = "hidden";
+single_player_dialog.setAttribute("role", "dialog");
+single_player_dialog.setAttribute("aria-modal", "true");
+single_player_dialog.setAttribute("aria-labelledby", "single_player_heading");
 single_player_dialog.innerHTML = `
     <section id="single_player_card">
-        <h2>Single Player</h2>
+        <h2 id="single_player_heading">Single Player</h2>
         <p>Choose your side. The AI will play the other pieces.</p>
         <div id="single_player_choices">
             <button id="choose_white_pieces" data-side="white" type="button">
@@ -185,6 +195,7 @@ document.body.append(single_player_dialog);
 const eagle_vision_button = document.createElement("button");
 eagle_vision_button.id = "eagle_vision_button";
 eagle_vision_button.type = "button";
+eagle_vision_button.setAttribute("aria-label", "Use Eagle Vision");
 eagle_vision_button.innerHTML = `
     <span id="eagle_vision_label">Eagle Vision</span>
     <span id="eagle_vision_status">Ready</span>
@@ -197,6 +208,7 @@ document.body.append(eagle_vision_button);
 const royal_jump_button = document.createElement("button");
 royal_jump_button.id = "royal_jump_button";
 royal_jump_button.type = "button";
+royal_jump_button.setAttribute("aria-label", "Use Royal Jump");
 royal_jump_button.innerHTML = `
     <span id="royal_jump_label">Royal Jump</span>
     <span id="royal_jump_status">Ready</span>
@@ -209,6 +221,7 @@ document.body.append(royal_jump_button);
 const queens_wrath_button = document.createElement("button");
 queens_wrath_button.id = "queens_wrath_button";
 queens_wrath_button.type = "button";
+queens_wrath_button.setAttribute("aria-label", "Use Queen's Wrath");
 queens_wrath_button.innerHTML = `
     <span id="queens_wrath_label">Queen's Wrath</span>
     <span id="queens_wrath_status">Final duel</span>
@@ -217,9 +230,10 @@ document.body.append(queens_wrath_button);
 
 const queen_progress_panel = document.createElement("section");
 queen_progress_panel.id = "queen_progress_panel";
+queen_progress_panel.setAttribute("aria-label", "Grand Regent Queen progress");
 queen_progress_panel.innerHTML = `
     <span id="queen_progress_label">Grand Regent Queen</span>
-    <span id="queen_progress_status">0/12</span>
+    <span id="queen_progress_status" aria-live="polite">0/12</span>
     <span id="queen_progress_bar">
         <span id="queen_progress_fill"></span>
     </span>
@@ -229,6 +243,7 @@ document.body.append(queen_progress_panel);
 const queen_notice = document.createElement("div");
 queen_notice.id = "queen_notice";
 queen_notice.className = "hidden";
+queen_notice.setAttribute("aria-live", "polite");
 queen_notice.innerHTML = `
     <span id="queen_notice_icon">♛</span>
     <span id="queen_notice_text">
@@ -239,9 +254,10 @@ document.body.append(queen_notice);
 
 const instructions_dialog = document.createElement("dialog");
 instructions_dialog.id = "instructions_dialog";
+instructions_dialog.setAttribute("aria-labelledby", "instructions_heading");
 instructions_dialog.innerHTML = `
     <section id="instructions_card">
-        <h2>How to Play</h2>
+        <h2 id="instructions_heading">How to Play</h2>
         <p><strong>White Pieces:</strong> guide the king upward and look for a clear route through the crossing.</p>
         <p><strong>Black Pieces:</strong> choose where new threats appear on the top row and try to close the route.</p>
         <p>You can play with the mouse by clicking a legal square.</p>
@@ -272,11 +288,11 @@ tutorial_duel_screen.innerHTML = `
     <span id="tutorial_duel_layout">
         <span class="tutorial_player_card">
             <span class="tutorial_white_piece">♔</span>
-            <span class="tutorial_player_label">Player 1</span>
+            <span class="tutorial_player_label">Player 1: White Pieces</span>
         </span>
         <span class="tutorial_player_card">
             <span class="tutorial_black_pieces">♟ ♞ ♝ ♛ ♜</span>
-            <span class="tutorial_player_label">Player 2</span>
+            <span class="tutorial_player_label">Player 2: Black Pieces</span>
         </span>
     </span>
     <span id="tutorial_duel_hint">Click anywhere to begin.</span>
@@ -287,6 +303,7 @@ const tutorial_control_button = document.createElement("button");
 tutorial_control_button.id = "tutorial_control_button";
 tutorial_control_button.type = "button";
 tutorial_control_button.textContent = "Skip tutorial";
+tutorial_control_button.setAttribute("aria-label", "Start or skip the tutorial");
 document.body.append(tutorial_control_button);
 
 const tutorial_slide_number = document.createElement("div");
@@ -296,29 +313,35 @@ document.body.append(tutorial_slide_number);
 const tutorial_text = document.createElement("div");
 tutorial_text.id = "tutorial_text";
 tutorial_text.className = "hidden";
+tutorial_text.setAttribute("aria-live", "polite");
 document.body.append(tutorial_text);
 
-const tutorial_mouse = document.createElement("div");
-tutorial_mouse.id = "tutorial_mouse";
-tutorial_mouse.className = "hidden";
-tutorial_mouse.textContent = "➤";
-document.body.append(tutorial_mouse);
+const tutorial_queen_countdown = document.createElement("div");
+tutorial_queen_countdown.id = "tutorial_queen_countdown";
+tutorial_queen_countdown.className = "hidden";
+tutorial_queen_countdown.innerHTML = `
+    <span id="tutorial_queen_countdown_icon">♛</span>
+    <span id="tutorial_queen_countdown_label">Grand Regent Queen</span>
+    <span id="tutorial_queen_countdown_turns">0/12</span>
+`;
+document.body.append(tutorial_queen_countdown);
 
 const tutorial_rule_steps = Object.freeze([
     Object.freeze({
         "phase": "rule_place_piece",
         "focus": "top_row",
         "text": (
-            "Black chooses a top-row square for each new piece. Use the " +
-            "mouse, or move with the arrow keys and press Space."
+            "Player 2 controls the Black Pieces. Black chooses a top-row " +
+            "square for each new piece, using the mouse or the arrow keys " +
+            "and Space."
         )
     }),
     Object.freeze({
         "phase": "rule_king_moves",
         "focus": "king",
         "text": (
-            "White guides the king upward. Click a dot, or use W, A, S, D " +
-            "to choose a square and press Space."
+            "Player 1 controls the White Pieces. White guides the king " +
+            "upward by clicking a dot, or by using W, A, S, D and Space."
         )
     }),
     Object.freeze({
@@ -347,8 +370,8 @@ const tutorial_rule_steps = Object.freeze([
         "phase": "rule_stage_goal",
         "focus": "stage_goal",
         "text": (
-            "Eagle Vision reveals danger. Royal Jump gives the king a " +
-            "longer leap when the path gets tight."
+            "Player 1 can use Eagle Vision to reveal danger, then Royal " +
+            "Jump to give the king a longer leap when the path gets tight."
         )
     }),
     Object.freeze({
@@ -356,7 +379,7 @@ const tutorial_rule_steps = Object.freeze([
         "focus": "queen_phase",
         "text": (
             "When the counter reaches 12, the Grand Regent Queen enters and " +
-            "Queen's Wrath joins Black's tools."
+            "Queen's Wrath joins Player 2's Black Pieces."
         )
     }),
     Object.freeze({
@@ -369,6 +392,137 @@ const tutorial_rule_steps = Object.freeze([
     })
 ]);
 
+const tutorial_practice_steps = Object.freeze([
+    Object.freeze({
+        "phase": "practice_crossing_story",
+        "focus": "crossing_story",
+        "action": "continue",
+        "text": (
+            "The crossing begins with a simple rhythm: Player 2 controls " +
+            "Black and places pressure from the top row, while Player 1 " +
+            "controls White and guides the king upward."
+        )
+    }),
+    Object.freeze({
+        "phase": "practice_place_pawn",
+        "focus": "top_row",
+        "action": "place_piece",
+        "text": (
+            "Player 2 moves first as the Black Pieces. Their pieces enter " +
+            "from the top row, starting the repeating cycle of pawn, knight, " +
+            "bishop. Place the opening pawn."
+        )
+    }),
+    Object.freeze({
+        "phase": "practice_move_king",
+        "focus": "king",
+        "action": "move_king",
+        "text": (
+            "Player 1 answers as the White Pieces. Choose a safe dot for " +
+            "the king and keep climbing toward the top of the board."
+        )
+    }),
+    Object.freeze({
+        "phase": "practice_place_knight",
+        "focus": "top_row",
+        "action": "place_piece",
+        "text": (
+            "Player 2 continues the Black Pieces cycle. After the pawn " +
+            "comes the knight. A knight protects L-shaped squares, so the " +
+            "highlighted file sets up pressure that can defend another " +
+            "piece later."
+        )
+    }),
+    Object.freeze({
+        "phase": "practice_eagle_vision",
+        "focus": "stage_goal",
+        "action": "eagle_vision",
+        "text": (
+            "When the board starts to feel crowded, White can call Eagle " +
+            "Vision. Use it now to reveal the danger squares in blue."
+        )
+    }),
+    Object.freeze({
+        "phase": "practice_move_after_vision",
+        "focus": "king",
+        "action": "move_king",
+        "text": (
+            "Now use what Eagle Vision showed you. Move the king to a safe " +
+            "dot that avoids the blue danger."
+        )
+    }),
+    Object.freeze({
+        "phase": "practice_place_bishop",
+        "focus": "top_row",
+        "action": "place_piece",
+        "text": (
+            "The third Player 2 piece is the bishop. The strongest bishop is " +
+            "not just nearby: it works with the knight's L-shape so Black's " +
+            "pieces protect each other."
+        )
+    }),
+    Object.freeze({
+        "phase": "practice_royal_jump",
+        "focus": "stage_goal",
+        "action": "royal_jump",
+        "text": (
+            "White also has Royal Jump for tight moments. Use it now and the " +
+            "king's normal dots will open into a wider gold jump range."
+        )
+    }),
+    Object.freeze({
+        "phase": "practice_use_jump",
+        "focus": "king",
+        "action": "move_king",
+        "text": (
+            "Royal Jump only lasts for this move. Choose one of the gold dots " +
+            "and leap before Black closes in."
+        )
+    }),
+    Object.freeze({
+        "phase": "practice_queen_countdown",
+        "focus": "queen_meter",
+        "action": "watch_queen_countdown",
+        "setup": "queen_countdown",
+        "text": (
+            "The first stage cannot last forever. After 12 turns, the Grand " +
+            "Regent Queen arrives. Watch one guided route build from slow " +
+            "pressure into the final duel, with White using abilities to " +
+            "stay alive."
+        )
+    }),
+    Object.freeze({
+        "phase": "practice_endgame_goal",
+        "focus": "queen_goal",
+        "action": "continue",
+        "setup": "queen_duel",
+        "text": (
+            "The final duel begins after 12 turns. Player 1 wins by " +
+            "reaching the highlighted row beneath the royal guard. Player 2 " +
+            "wins by trapping the king before that escape."
+        )
+    }),
+    Object.freeze({
+        "phase": "practice_queens_wrath",
+        "focus": "queen_phase",
+        "action": "queens_wrath",
+        "text": (
+            "In the final duel, Player 2's Black Pieces gain Queen's " +
+            "Wrath. Use it to call a rook onto the board and tighten the " +
+            "net around the king."
+        )
+    }),
+    Object.freeze({
+        "phase": "practice_place_rook",
+        "focus": "queen_phase",
+        "action": "spawn_wrath_rook",
+        "text": (
+            "Place the rook on a legal gold square. It must appear safely, " +
+            "not on a square that gives the king an instant direct check."
+        )
+    })
+]);
+
 const same_position = function (first, second) {
     return (
         first !== undefined &&
@@ -376,6 +530,40 @@ const same_position = function (first, second) {
         first.column === second.column &&
         first.row === second.row
     );
+};
+
+const current_practice_step = function () {
+    if (!tutorial_active || tutorial_mode !== "practice") {
+        return undefined;
+    }
+
+    return tutorial_practice_steps[tutorial_step_index];
+};
+
+const tutorial_allows_action = function (action) {
+    const step = current_practice_step();
+
+    return step === undefined || step.action === action;
+};
+
+const set_tutorial_guided_square = function (position, kind = "suggested") {
+    tutorial_guided_square = (
+        position === undefined
+        ? undefined
+        : {
+            "column": position.column,
+            "row": position.row
+        }
+    );
+    tutorial_guided_kind = (
+        tutorial_guided_square === undefined
+        ? "none"
+        : kind
+    );
+};
+
+const clear_tutorial_guided_square = function () {
+    set_tutorial_guided_square(undefined);
 };
 
 const square_colour_class = function (position) {
@@ -409,6 +597,18 @@ const tutorial_slide_number_for_phase = function () {
 
     if (rule_index >= 0) {
         return rule_index + 4;
+    }
+
+    const practice_index = tutorial_practice_steps.findIndex(function (step) {
+        return step.phase === tutorial_phase;
+    });
+
+    if (practice_index >= 0) {
+        return practice_index + 3;
+    }
+
+    if (tutorial_phase === "practice_complete") {
+        return tutorial_practice_steps.length + 3;
     }
 
     return "";
@@ -478,6 +678,7 @@ const reset_game_state = function () {
 
     hovered_column = undefined;
     hovered_position = undefined;
+    clear_tutorial_guided_square();
 
     if (result_dialog.open) {
         result_dialog.close();
@@ -492,31 +693,54 @@ const reset_game_state = function () {
     }, 0);
 };
 
+const tutorial_uses_click_to_advance = function () {
+    const step = current_practice_step();
+
+    return (
+        tutorial_mode === "classic" ||
+        tutorial_phase === "title" ||
+        tutorial_phase === "duel_intro" ||
+        (
+            tutorial_mode === "practice" &&
+            step !== undefined &&
+            step.action === "continue"
+        )
+    );
+};
+
 const hide_tutorial_layers = function () {
     tutorial_title_screen.classList.add("hidden");
     tutorial_duel_screen.classList.add("hidden");
     tutorial_text.classList.add("hidden");
-    tutorial_mouse.classList.add("hidden");
+    tutorial_queen_countdown.classList.add("hidden");
     tutorial_slide_number.classList.add("hidden");
     document.body.classList.remove("tutorial_start_mode");
     document.body.classList.remove("tutorial_board_focus_mode");
+    document.body.classList.remove("tutorial_countdown_mode");
+    document.body.classList.remove("tutorial_continue_mode");
     document.body.classList.remove("tutorial_focus_abilities");
     document.body.classList.remove("tutorial_focus_queen_meter");
     document.body.classList.remove("tutorial_focus_queens_wrath");
+    document.body.classList.remove("tutorial_practice_mode");
     tutorial_focus = "none";
     tutorial_step_index = 0;
+    clear_tutorial_guided_square();
     clearInterval(tutorial_animation_timer);
+    clearTimeout(tutorial_fast_forward_timer);
 };
 
 const update_tutorial_focus_class = function () {
     document.body.classList.toggle(
         "tutorial_focus_abilities",
         tutorial_focus === "stage_goal" ||
+        tutorial_phase === "practice_eagle_vision" ||
+        tutorial_phase === "practice_royal_jump" ||
         tutorial_focus === "queen_phase" ||
         tutorial_focus === "queen_goal"
     );
     document.body.classList.toggle(
         "tutorial_focus_queen_meter",
+        tutorial_focus === "queen_meter" ||
         tutorial_focus === "queen_phase" ||
         tutorial_focus === "queen_goal"
     );
@@ -530,6 +754,7 @@ const complete_tutorial = function () {
     clearTimeout(tutorial_timer);
 
     tutorial_active = false;
+    tutorial_mode = "practice";
     tutorial_phase = "completed";
     tutorial_focus = "none";
     tutorial_step_index = 0;
@@ -545,6 +770,7 @@ const skip_tutorial_to_game = function () {
     reset_game_state();
 
     tutorial_active = false;
+    tutorial_mode = "practice";
     tutorial_phase = "completed";
     tutorial_focus = "none";
     tutorial_step_index = 0;
@@ -559,6 +785,7 @@ const start_tutorial_title = function () {
     reset_game_state();
 
     tutorial_active = true;
+    tutorial_mode = "practice";
     tutorial_phase = "title";
     tutorial_focus = "none";
     tutorial_step_index = 0;
@@ -576,10 +803,11 @@ const start_tutorial_title = function () {
     redraw_board();
 };
 
-const start_tutorial_at_duel_intro = function () {
+const start_tutorial_at_duel_intro = function (mode = "practice") {
     reset_game_state();
 
     tutorial_active = true;
+    tutorial_mode = mode;
     tutorial_phase = "duel_intro";
     tutorial_focus = "none";
     tutorial_step_index = 0;
@@ -662,6 +890,7 @@ const show_pawn_chase_spotlight = function () {
 const show_current_tutorial_rule = function () {
     const step = tutorial_rule_steps[tutorial_step_index];
 
+    tutorial_mode = "classic";
     clearInterval(tutorial_animation_timer);
 
     if (step === undefined) {
@@ -705,6 +934,326 @@ const advance_tutorial_rule = function () {
     show_current_tutorial_rule();
 };
 
+const prepare_practice_queen_duel = function () {
+    clearTimeout(pawn_wave_timer);
+    clearTimeout(opening_timer);
+    clearTimeout(royal_guard_timer);
+    clearTimeout(queen_arrival_timer);
+
+    pawn_wave_active = false;
+    pawn_wave_column = -1;
+    opening_active = false;
+    opening_phase = "none";
+    royal_guard_arrival_active = false;
+    royal_guard_arrival_started = false;
+    royal_guard_column = -1;
+    queen_arrival_active = false;
+    queen_arrival_started = false;
+    queen_removed_positions = [];
+    queen_animation_position = undefined;
+
+    game = KingCrossing.begin_queen_duel(
+        KingCrossing.begin_queen_arrival(game)
+    );
+
+    input_locked = false;
+    eagle_vision_active = false;
+    royal_jump_active = false;
+    royal_jump_charge = royal_jump_max_charge;
+    queens_wrath_active = false;
+    queens_wrath_revealed = true;
+    hovered_column = undefined;
+    hovered_position = undefined;
+    clear_tutorial_guided_square();
+};
+
+const update_tutorial_queen_countdown = function () {
+    el("tutorial_queen_countdown_turns").textContent = (
+        `${Math.min(tutorial_countdown_turns, game.target_turns)}/` +
+        `${game.target_turns}`
+    );
+};
+
+const finish_tutorial_queen_countdown = function () {
+    clearTimeout(tutorial_fast_forward_timer);
+    tutorial_fast_forward_timer = undefined;
+    input_locked = true;
+    clear_tutorial_guided_square();
+    eagle_vision_active = false;
+    royal_jump_active = false;
+
+    game = KingCrossing.begin_queen_arrival(game);
+    update_tutorial_queen_countdown();
+    redraw_board();
+
+    tutorial_timer = setTimeout(function () {
+        tutorial_queen_countdown.classList.add("hidden");
+        document.body.classList.remove("tutorial_countdown_mode");
+        tutorial_step_index += 1;
+        show_current_practice_step();
+    }, 850);
+};
+
+const tutorial_fast_forward_delay = function () {
+    const progress = tutorial_countdown_turns / game.target_turns;
+
+    return Math.max(70, Math.round(420 - (progress * 330)));
+};
+
+const schedule_tutorial_fast_forward_turn = function () {
+    clearTimeout(tutorial_fast_forward_timer);
+
+    tutorial_fast_forward_timer = setTimeout(function () {
+        play_one_tutorial_fast_forward_turn();
+
+        if (
+            tutorial_active &&
+            tutorial_phase === "practice_queen_countdown" &&
+            (
+                tutorial_countdown_turns >= game.target_turns ||
+                game.phase === "royal_guard_arrival"
+            )
+        ) {
+            finish_tutorial_queen_countdown();
+            return;
+        }
+
+        if (
+            tutorial_active &&
+            tutorial_phase === "practice_queen_countdown"
+        ) {
+            schedule_tutorial_fast_forward_turn();
+        }
+    }, tutorial_fast_forward_delay());
+};
+
+const play_one_tutorial_fast_forward_turn = function () {
+    if (
+        !tutorial_active ||
+        tutorial_phase !== "practice_queen_countdown" ||
+        game.result !== "playing"
+    ) {
+        return;
+    }
+
+    if (
+        tutorial_countdown_turns >= game.target_turns ||
+        game.phase === "royal_guard_arrival"
+    ) {
+        finish_tutorial_queen_countdown();
+        return;
+    }
+
+    const previous_turn = game.turn;
+    eagle_vision_active = false;
+    royal_jump_active = false;
+
+    if (game.phase === "place_piece") {
+        const placement = KingCrossing.choose_countdown_piece_placement(game);
+
+        if (placement !== undefined) {
+            set_tutorial_guided_square({
+                "column": placement.column,
+                "row": game.height - 1
+            }, "black");
+            game = KingCrossing.place_piece(game, placement.column);
+        }
+    } else if (game.phase === "move_king") {
+        const move = KingCrossing.choose_countdown_king_move(game);
+
+        if (move !== undefined) {
+            eagle_vision_active = (
+                tutorial_countdown_turns === 2 ||
+                tutorial_countdown_turns === 7
+            );
+            royal_jump_active = move.royal_jump === true;
+            set_tutorial_guided_square(
+                move.position,
+                move.royal_jump === true ? "royal_jump" : "white"
+            );
+            game = KingCrossing.move_king_to(
+                game,
+                move.position,
+                move.royal_jump === true
+            );
+        }
+
+        if (game.phase === "scroll_world") {
+            game = KingCrossing.finish_forward_move(game);
+        }
+    }
+
+    if (game.result !== "playing") {
+        tutorial_countdown_turns = game.target_turns;
+        finish_tutorial_queen_countdown();
+        return;
+    }
+
+    if (game.turn > previous_turn) {
+        tutorial_countdown_turns += 1;
+    }
+
+    tutorial_countdown_turns = Math.min(
+        tutorial_countdown_turns,
+        game.target_turns
+    );
+
+    update_tutorial_queen_countdown();
+    redraw_board();
+};
+
+const prepare_practice_queen_countdown = function () {
+    clearTimeout(tutorial_fast_forward_timer);
+    clearTimeout(tutorial_timer);
+    clearTimeout(pawn_wave_timer);
+    clearTimeout(opening_timer);
+    clearTimeout(royal_guard_timer);
+    clearTimeout(queen_arrival_timer);
+
+    game = KingCrossing.create_game();
+    input_locked = true;
+    pawn_wave_active = false;
+    pawn_wave_column = -1;
+    opening_active = false;
+    opening_phase = "none";
+    royal_guard_arrival_active = false;
+    royal_guard_arrival_started = false;
+    queen_arrival_active = false;
+    queen_arrival_started = false;
+    hovered_column = undefined;
+    hovered_position = undefined;
+    queen_notice_state = "panel";
+    tutorial_countdown_turns = 0;
+    clear_tutorial_guided_square();
+
+    eagle_vision_active = false;
+    royal_jump_active = false;
+    queens_wrath_active = false;
+
+    tutorial_queen_countdown.classList.remove("hidden");
+    document.body.classList.add("tutorial_countdown_mode");
+    update_tutorial_queen_countdown();
+
+    if (game.phase === "scroll_world") {
+        game = KingCrossing.finish_forward_move(game);
+        update_tutorial_queen_countdown();
+        redraw_board();
+    }
+
+    tutorial_timer = setTimeout(function () {
+        schedule_tutorial_fast_forward_turn();
+    }, 2200);
+};
+
+const apply_practice_step_setup = function (step) {
+    if (step.setup === "queen_countdown") {
+        prepare_practice_queen_countdown();
+    }
+
+    if (step.setup === "queen_duel") {
+        prepare_practice_queen_duel();
+    }
+
+    if (step.action === "place_piece" || step.action === "spawn_wrath_rook") {
+        hovered_column = undefined;
+        hovered_position = undefined;
+    }
+};
+
+const show_current_practice_step = function () {
+    const step = tutorial_practice_steps[tutorial_step_index];
+
+    clearInterval(tutorial_animation_timer);
+    clearTimeout(tutorial_fast_forward_timer);
+    clearTimeout(tutorial_timer);
+    tutorial_animation_start = Date.now();
+    tutorial_queen_countdown.classList.add("hidden");
+    document.body.classList.remove("tutorial_countdown_mode");
+    document.body.classList.remove("tutorial_continue_mode");
+
+    if (step === undefined) {
+        tutorial_phase = "practice_complete";
+        tutorial_focus = "none";
+        tutorial_text.textContent = (
+            "You have now played the main loop yourself. Start a fresh match " +
+            "when you are ready."
+        );
+        tutorial_text.classList.remove("hidden");
+        tutorial_control_button.textContent = "Start match";
+        input_locked = true;
+        update_tutorial_focus_class();
+        update_tutorial_slide_number();
+        redraw_board();
+        return;
+    }
+
+    tutorial_phase = step.phase;
+    tutorial_focus = step.focus;
+    tutorial_text.textContent = step.text;
+    tutorial_text.classList.remove("hidden");
+    tutorial_control_button.textContent = "Skip tutorial";
+    document.body.classList.remove("tutorial_start_mode");
+    document.body.classList.add("tutorial_board_focus_mode");
+    document.body.classList.add("tutorial_practice_mode");
+    document.body.classList.toggle("tutorial_continue_mode", step.action === "continue");
+    update_tutorial_focus_class();
+    apply_practice_step_setup(step);
+    update_tutorial_slide_number();
+    input_locked = (
+        step.action === "watch_queen_countdown" ||
+        step.action === "continue"
+    );
+    redraw_board();
+};
+
+const start_practice_tutorial = function () {
+    reset_game_state();
+
+    play_mode = "multiplayer";
+    human_side = "white";
+    update_player_names_for_mode();
+
+    tutorial_active = true;
+    tutorial_mode = "practice";
+    tutorial_step_index = 0;
+
+    tutorial_title_screen.classList.add("hidden");
+    tutorial_duel_screen.classList.add("hidden");
+
+    show_current_practice_step();
+};
+
+const practice_step_accepts_action = function (step, details) {
+    if (
+        (
+            step.phase === "practice_move_king" ||
+            step.phase === "practice_move_after_vision"
+        ) &&
+        (details === undefined || details.forward !== true)
+    ) {
+        return false;
+    }
+
+    return true;
+};
+
+const advance_practice_after_action = function (action, details) {
+    const step = tutorial_practice_steps[tutorial_step_index];
+
+    if (
+        !tutorial_active ||
+        tutorial_mode !== "practice" ||
+        step === undefined ||
+        step.action !== action ||
+        !practice_step_accepts_action(step, details)
+    ) {
+        return;
+    }
+
+    tutorial_step_index += 1;
+    show_current_practice_step();
+};
+
 const show_player_one_spotlight = function () {
     if (!tutorial_active) {
         return;
@@ -735,6 +1284,11 @@ const tutorial_click = function () {
     }
 
     if (tutorial_phase === "duel_intro") {
+        if (tutorial_mode === "practice") {
+            start_practice_tutorial();
+            return;
+        }
+
         start_tutorial_king_opening();
         return;
     }
@@ -751,6 +1305,15 @@ const tutorial_click = function () {
 
     if (tutorial_phase.indexOf("rule_") === 0) {
         advance_tutorial_rule();
+        return;
+    }
+
+    if (
+        tutorial_mode === "practice" &&
+        current_practice_step() !== undefined &&
+        current_practice_step().action === "continue"
+    ) {
+        advance_practice_after_action("continue");
     }
 };
 
@@ -827,6 +1390,15 @@ tutorial_control_button.onclick = function (event) {
     event.preventDefault();
     event.stopPropagation();
 
+    if (
+        tutorial_active &&
+        tutorial_mode === "practice" &&
+        tutorial_phase === "practice_complete"
+    ) {
+        skip_tutorial_to_game();
+        return;
+    }
+
     if (tutorial_active) {
         skip_tutorial_to_game();
         return;
@@ -858,7 +1430,7 @@ single_player_dialog.addEventListener("click", function (event) {
 });
 
 document.addEventListener("pointerdown", function (event) {
-    if (!tutorial_active) {
+    if (!tutorial_active || !tutorial_uses_click_to_advance()) {
         return;
     }
 
@@ -882,7 +1454,11 @@ document.addEventListener("pointerup", function (event) {
     const pointer_down = tutorial_pointer_down;
     tutorial_pointer_down = undefined;
 
-    if (!tutorial_active || pointer_down === undefined) {
+    if (
+        !tutorial_active ||
+        !tutorial_uses_click_to_advance() ||
+        pointer_down === undefined
+    ) {
         return;
     }
 
@@ -1136,7 +1712,10 @@ const is_tutorial_pawn_focus_square = function (position) {
 const is_tutorial_top_row_focus_square = function (position) {
     return (
         tutorial_active &&
-        tutorial_focus === "top_row" &&
+        (
+            tutorial_focus === "top_row" ||
+            tutorial_focus === "crossing_story"
+        ) &&
         position.row === game.height - 1
     );
 };
@@ -1160,14 +1739,25 @@ const is_tutorial_pawn_wall_danger_square = function (position) {
 const is_tutorial_queen_goal_focus_square = function (position) {
     return (
         tutorial_active &&
-        tutorial_phase === "rule_queen_goal" &&
-        tutorial_queen_vision_revealed() &&
+        (
+            (
+                tutorial_phase === "rule_queen_goal" &&
+                tutorial_queen_vision_revealed()
+            ) ||
+            tutorial_phase === "practice_endgame_goal"
+        ) &&
         position.row === game.height - 2
     );
 };
 
 const is_tutorial_stage_goal_square = function (position) {
-    return false;
+    return (
+        tutorial_active &&
+        tutorial_focus === "crossing_story" &&
+        position.column === game.king.column &&
+        position.row > game.king.row &&
+        position.row < game.height - 1
+    );
 };
 
 const tutorial_knight_position = function () {
@@ -1642,7 +2232,10 @@ const is_tutorial_queen_attack_square = function (position) {
 const is_tutorial_arrow_square = function (position) {
     if (
         tutorial_active &&
-        tutorial_phase === "player_one" &&
+        (
+            tutorial_phase === "player_one" ||
+            tutorial_focus === "crossing_story"
+        ) &&
         tutorial_positions_include([
             {"column": game.king.column, "row": game.king.row + 1},
             {"column": game.king.column, "row": game.king.row + 2}
@@ -1711,9 +2304,129 @@ const is_tutorial_rule_square = function (position) {
     );
 };
 
+const preferred_tutorial_column = function (columns, preferred_column) {
+    if (columns.indexOf(preferred_column) >= 0) {
+        return preferred_column;
+    }
+
+    return columns[Math.floor(columns.length / 2)];
+};
+
+const tutorial_recommended_placement_square = function (step) {
+    const columns = legal_black_placement_columns();
+
+    if (columns.length === 0) {
+        return undefined;
+    }
+
+    if (step.phase === "practice_place_pawn") {
+        return {
+            "column": preferred_tutorial_column(columns, 4),
+            "row": game.height - 1
+        };
+    }
+
+    if (step.phase === "practice_place_knight") {
+        return {
+            "column": preferred_tutorial_column(columns, 1),
+            "row": game.height - 1
+        };
+    }
+
+    if (step.phase === "practice_place_bishop") {
+        return {
+            "column": preferred_tutorial_column(columns, 3),
+            "row": game.height - 1
+        };
+    }
+
+    return {
+        "column": preferred_tutorial_column(columns, columns[0]),
+        "row": game.height - 1
+    };
+};
+
+const tutorial_recommended_king_square = function () {
+    const positions = legal_king_positions();
+    const forward_position = {
+        "column": game.king.column,
+        "row": game.king.row + 1
+    };
+
+    if (
+        positions.some(function (position) {
+            return same_position(position, forward_position);
+        })
+    ) {
+        return forward_position;
+    }
+
+    return first_legal_position(positions);
+};
+
+const tutorial_recommended_square = function () {
+    const step = current_practice_step();
+
+    if (tutorial_guided_square !== undefined) {
+        return tutorial_guided_square;
+    }
+
+    if (step === undefined) {
+        return undefined;
+    }
+
+    if (step.action === "place_piece") {
+        return tutorial_recommended_placement_square(step);
+    }
+
+    if (step.action === "move_king") {
+        return tutorial_recommended_king_square();
+    }
+
+    if (step.action === "spawn_wrath_rook") {
+        return first_legal_position(legal_wrath_positions());
+    }
+
+    return undefined;
+};
+
+const is_tutorial_guided_square = function (position) {
+    return (
+        tutorial_active &&
+        same_position(position, tutorial_recommended_square())
+    );
+};
+
+const tutorial_guided_square_kind = function () {
+    const step = current_practice_step();
+
+    if (tutorial_guided_square !== undefined) {
+        return tutorial_guided_kind;
+    }
+
+    if (step === undefined) {
+        return "none";
+    }
+
+    if (step.action === "place_piece" || step.action === "spawn_wrath_rook") {
+        return "black";
+    }
+
+    if (step.action === "move_king" && royal_jump_active) {
+        return "royal_jump";
+    }
+
+    if (step.action === "move_king") {
+        return "white";
+    }
+
+    return "suggested";
+};
+
 const is_tutorial_focus_square = function (position) {
     return (
         is_tutorial_demo_piece_square(position) ||
+        is_tutorial_guided_square(position) ||
         is_tutorial_king_focus_square(position) ||
         is_tutorial_pawn_focus_square(position) ||
         is_tutorial_top_row_focus_square(position) ||
@@ -1744,6 +2457,7 @@ const is_ai_side = function (side) {
 
 const is_player_one_turn = function () {
     return (
+        tutorial_allows_action("move_king") &&
         is_human_side("white") &&
         game.result === "playing" &&
         game.phase === "move_king" &&
@@ -1757,6 +2471,7 @@ const is_player_one_turn = function () {
 
 const is_player_two_piece_turn = function () {
     return (
+        tutorial_allows_action("place_piece") &&
         is_human_side("black") &&
         game.result === "playing" &&
         game.phase === "place_piece" &&
@@ -1770,6 +2485,10 @@ const is_player_two_piece_turn = function () {
 
 const is_player_two_queen_turn = function () {
     return (
+        (
+            tutorial_allows_action("queens_wrath") ||
+            tutorial_allows_action("spawn_wrath_rook")
+        ) &&
         is_human_side("black") &&
         game.result === "playing" &&
         game.phase === "move_queen" &&
@@ -1872,6 +2591,14 @@ const active_king_offsets = function () {
     return normal_king_offsets;
 };
 
+const is_tutorial_countdown_king_turn = function () {
+    return (
+        tutorial_active &&
+        tutorial_phase === "practice_queen_countdown" &&
+        game.phase === "move_king"
+    );
+};
+
 const is_piece_on_square = function (position) {
     const token = KingCrossing.cell_token(game, position);
 
@@ -1892,7 +2619,7 @@ const is_inside_board = function (position) {
 };
 
 const is_possible_king_range_square = function (position) {
-    if (!is_player_one_turn()) {
+    if (!is_player_one_turn() && !is_tutorial_countdown_king_turn()) {
         return false;
     }
 
@@ -1965,6 +2692,7 @@ const is_ghost_king_square = function (position) {
 
 const is_queen_move_hint_square = function (position) {
     return (
+        tutorial_allows_action("move_queen") &&
         is_player_two_queen_turn() &&
         !queens_wrath_active &&
         KingCrossing.is_queen_move_legal(game, position)
@@ -2306,6 +3034,11 @@ const class_for_token = function (token, base_token, position) {
         classes.push("tutorial_placed_piece_square");
     }
 
+    if (is_tutorial_guided_square(position)) {
+        classes.push("tutorial_guided_square");
+        classes.push(`tutorial_guided_${tutorial_guided_square_kind()}`);
+    }
+
     if (is_royal_jump_range_square(position)) {
         classes.push("royal_jump_hint");
     }
@@ -2366,8 +3099,12 @@ const alt_for_token = function (token, base_token, position) {
         return "Tutorial focus: king's route upward";
     }
 
+    if (is_tutorial_guided_square(position)) {
+        return "Tutorial suggested square";
+    }
+
     if (is_tutorial_demo_piece_square(position)) {
-        return `Tutorial example: ${piece_labels[token].toLowerCase()}`;
+        return `Tutorial piece: ${piece_labels[token].toLowerCase()}`;
     }
 
     if (is_queen_animation_square(position)) {
@@ -2437,249 +3174,10 @@ const next_piece_name = function () {
     return "Bishop";
 };
 
-const rect_center = function (element) {
-    const rect = element.getBoundingClientRect();
-
-    return {
-        "x": rect.left + rect.width / 2,
-        "y": rect.top + rect.height / 2
-    };
-};
-
-const stage_cell = function (position) {
-    return document.querySelector(
-        `.board_cell[data-column="${position.column}"][data-row="${position.row}"]`
-    );
-};
-
-const blend_points = function (start, end, amount) {
-    return {
-        "x": start.x + (end.x - start.x) * amount,
-        "y": start.y + (end.y - start.y) * amount
-    };
-};
-
-const top_row_pointer_position = function (column) {
-    if (column === undefined) {
-        return undefined;
-    }
-
-    const left_column = Math.floor(Math.min(Math.max(column, 0), 7));
-    const right_column = Math.ceil(Math.min(Math.max(column, 0), 7));
-    const left_cell = stage_cell({
-        "column": left_column,
-        "row": game.height - 1
-    });
-    const right_cell = stage_cell({
-        "column": right_column,
-        "row": game.height - 1
-    });
-
-    if (left_cell === null || right_cell === null) {
-        return undefined;
-    }
-
-    return blend_points(
-        rect_center(left_cell),
-        rect_center(right_cell),
-        column - left_column
-    );
-};
-
-const stage_demo_pointer_position = function () {
-    const elapsed = tutorial_stage_elapsed();
-    const king_cell = stage_cell(game.king);
-    const target_cell = stage_cell(tutorial_stage_move_target());
-
-    if (king_cell === null || target_cell === null) {
-        return undefined;
-    }
-
-    const start = rect_center(king_cell);
-    const eagle = rect_center(eagle_vision_button);
-    const jump = rect_center(royal_jump_button);
-    const target = rect_center(target_cell);
-
-    if (elapsed < tutorial_eagle_click_time) {
-        return blend_points(start, eagle, elapsed / tutorial_eagle_click_time);
-    }
-
-    if (elapsed < tutorial_jump_click_time) {
-        return blend_points(
-            eagle,
-            jump,
-            (elapsed - tutorial_eagle_click_time) /
-                (tutorial_jump_click_time - tutorial_eagle_click_time)
-        );
-    }
-
-    if (elapsed < tutorial_move_click_time) {
-        return blend_points(
-            jump,
-            target,
-            (elapsed - tutorial_jump_click_time) /
-                (tutorial_move_click_time - tutorial_jump_click_time)
-        );
-    }
-
-    return target;
-};
-
-const placement_demo_pointer_position = function () {
-    const elapsed = tutorial_place_elapsed();
-    const top_row_position = top_row_pointer_position(
-        tutorial_placing_knight_column()
-    );
-    const center_cell = stage_cell({"column": 4, "row": 5});
-
-    if (top_row_position === undefined || center_cell === null) {
-        return undefined;
-    }
-
-    const center = rect_center(center_cell);
-
-    if (elapsed < tutorial_place_click_time) {
-        return top_row_position;
-    }
-
-    return blend_points(
-        top_row_position,
-        center,
-        Math.min((elapsed - tutorial_place_click_time) / 850, 1)
-    );
-};
-
-const king_move_demo_pointer_position = function () {
-    const elapsed = tutorial_king_move_elapsed();
-    const king_cell = stage_cell(game.king);
-    const target_cell = stage_cell(tutorial_king_move_target());
-
-    if (king_cell === null || target_cell === null) {
-        return undefined;
-    }
-
-    const start = rect_center(king_cell);
-    const target = rect_center(target_cell);
-
-    if (elapsed < tutorial_king_move_click_time) {
-        return blend_points(start, target, elapsed / tutorial_king_move_click_time);
-    }
-
-    return target;
-};
-
-const bishop_demo_pointer_position = function () {
-    const elapsed = tutorial_bishop_elapsed();
-    const king_cell = stage_cell(tutorial_capture_king_position());
-    const bishop_cell = stage_cell(tutorial_bishop_position());
-    const center_cell = stage_cell({"column": 4, "row": 5});
-
-    if (king_cell === null || bishop_cell === null || center_cell === null) {
-        return undefined;
-    }
-
-    const start = rect_center(king_cell);
-    const target = rect_center(bishop_cell);
-    const center = rect_center(center_cell);
-
-    if (elapsed < tutorial_bishop_click_time) {
-        return blend_points(start, target, elapsed / tutorial_bishop_click_time);
-    }
-
-    return blend_points(
-        target,
-        center,
-        Math.min((elapsed - tutorial_bishop_click_time) / 850, 1)
-    );
-};
-
-const queen_wrath_demo_pointer_position = function () {
-    const elapsed = tutorial_queen_wrath_elapsed();
-    const queen_cell = stage_cell(tutorial_queen_position());
-    const rook_cell = stage_cell(tutorial_rook_position());
-
-    if (queen_cell === null || rook_cell === null) {
-        return undefined;
-    }
-
-    const start = rect_center(queen_cell);
-    const wrath = rect_center(queens_wrath_button);
-    const rook = rect_center(rook_cell);
-
-    if (elapsed < tutorial_queen_wrath_click_time) {
-        return blend_points(start, wrath, elapsed / tutorial_queen_wrath_click_time);
-    }
-
-    if (elapsed < tutorial_queen_rook_click_time) {
-        return blend_points(
-            wrath,
-            rook,
-            (elapsed - tutorial_queen_wrath_click_time) /
-                (tutorial_queen_rook_click_time - tutorial_queen_wrath_click_time)
-        );
-    }
-
-    return rook;
-};
-
-const queen_goal_demo_pointer_position = function () {
-    const elapsed = tutorial_queen_vision_elapsed();
-    const king_cell = stage_cell(game.king);
-
-    if (king_cell === null) {
-        return undefined;
-    }
-
-    const start = rect_center(king_cell);
-    const eagle = rect_center(eagle_vision_button);
-
-    if (elapsed < tutorial_queen_vision_click_time) {
-        return blend_points(start, eagle, elapsed / tutorial_queen_vision_click_time);
-    }
-
-    return eagle;
-};
-
 const is_tutorial_click_pulse = function (time) {
     const elapsed = tutorial_stage_elapsed();
 
     return elapsed >= time && elapsed < time + 240;
-};
-
-const is_tutorial_place_click_pulse = function () {
-    const elapsed = tutorial_place_elapsed();
-
-    return (
-        elapsed >= tutorial_place_click_time &&
-        elapsed < tutorial_place_click_time + 260
-    );
-};
-
-const is_tutorial_knight_click_pulse = function () {
-    const elapsed = tutorial_place_elapsed();
-
-    return (
-        elapsed >= tutorial_place_click_time &&
-        elapsed < tutorial_place_click_time + 260
-    );
-};
-
-const is_tutorial_king_move_click_pulse = function () {
-    const elapsed = tutorial_king_move_elapsed();
-
-    return (
-        elapsed >= tutorial_king_move_click_time &&
-        elapsed < tutorial_king_move_click_time + 260
-    );
-};
-
-const is_tutorial_bishop_click_pulse = function () {
-    const elapsed = tutorial_bishop_elapsed();
-
-    return (
-        elapsed >= tutorial_bishop_click_time &&
-        elapsed < tutorial_bishop_click_time + 260
-    );
 };
 
 const is_tutorial_queen_wrath_click_pulse = function () {
@@ -2704,84 +3202,6 @@ const is_tutorial_queen_vision_click_pulse = function () {
         elapsed >= tutorial_queen_vision_click_time &&
         elapsed < tutorial_queen_vision_click_time + 260
     );
-};
-
-const update_tutorial_mouse = function () {
-    if (
-        !tutorial_active ||
-        (
-            tutorial_phase !== "rule_place_piece" &&
-            tutorial_phase !== "rule_king_moves" &&
-            tutorial_phase !== "rule_bishop_capture" &&
-            tutorial_phase !== "rule_bishop_defended" &&
-            tutorial_phase !== "rule_stage_goal" &&
-            tutorial_phase !== "rule_queen_wrath" &&
-            tutorial_phase !== "rule_queen_goal"
-        )
-    ) {
-        tutorial_mouse.classList.add("hidden");
-        return;
-    }
-
-    const position = (
-        tutorial_phase === "rule_place_piece"
-        ? placement_demo_pointer_position()
-        : tutorial_phase === "rule_king_moves"
-        ? king_move_demo_pointer_position()
-        : (
-            tutorial_phase === "rule_bishop_capture" ||
-            tutorial_phase === "rule_bishop_defended"
-        )
-        ? bishop_demo_pointer_position()
-        : tutorial_phase === "rule_queen_wrath"
-        ? queen_wrath_demo_pointer_position()
-        : tutorial_phase === "rule_queen_goal"
-        ? queen_goal_demo_pointer_position()
-        : stage_demo_pointer_position()
-    );
-
-    if (position === undefined) {
-        tutorial_mouse.classList.add("hidden");
-        return;
-    }
-
-    tutorial_mouse.classList.remove("hidden");
-    tutorial_mouse.classList.toggle(
-        "tutorial_mouse_clicking",
-        (
-            tutorial_phase === "rule_place_piece" &&
-            is_tutorial_place_click_pulse()
-        ) ||
-            (
-                tutorial_phase === "rule_king_moves" &&
-                is_tutorial_king_move_click_pulse()
-            ) ||
-            (
-                (
-                    tutorial_phase === "rule_bishop_capture" ||
-                    tutorial_phase === "rule_bishop_defended"
-                ) &&
-                is_tutorial_bishop_click_pulse()
-            ) ||
-            (
-                tutorial_phase === "rule_queen_wrath" &&
-                is_tutorial_queen_wrath_click_pulse()
-            ) ||
-            (
-                tutorial_phase === "rule_queen_goal" &&
-                is_tutorial_queen_vision_click_pulse()
-            ) ||
-            (
-                tutorial_phase === "rule_stage_goal" &&
-                (
-                    is_tutorial_click_pulse(tutorial_eagle_click_time) ||
-                    is_tutorial_click_pulse(tutorial_jump_click_time) ||
-                    is_tutorial_click_pulse(tutorial_move_click_time)
-                )
-            )
-    );
-    tutorial_mouse.style.left = `${position.x}px`;
-    tutorial_mouse.style.top = `${position.y}px`;
 };
 
 const update_tutorial_ability_demo = function () {
@@ -2833,7 +3253,6 @@ const update_tutorial_ability_demo = function () {
             el("queen_progress_fill").style.width = `${100 / game.target_turns}%`;
         }
 
-        update_tutorial_mouse();
         return;
     }
 
@@ -2865,7 +3284,6 @@ const update_tutorial_ability_demo = function () {
         el("eagle_vision_fill").style.width = "100%";
     }
 
-    update_tutorial_mouse();
 };
 
 const update_turn_panels = function () {
@@ -2902,6 +3320,7 @@ const tutorial_shows_queen_meter = function () {
     return (
         tutorial_active &&
         (
+            tutorial_phase === "practice_queen_countdown" ||
             tutorial_phase === "rule_queen_wrath" ||
             tutorial_phase === "rule_queen_goal"
         )
@@ -2959,7 +3378,8 @@ const update_eagle_vision_button = function () {
         game.result === "playing" &&
         game.phase === "move_king" &&
         !input_locked &&
-        is_human_side("white")
+        is_human_side("white") &&
+        tutorial_allows_action("eagle_vision")
     );
 
     el("eagle_vision_fill").style.width = `${charge_percentage}%`;
@@ -2994,7 +3414,8 @@ const update_royal_jump_button = function () {
         game.result === "playing" &&
         game.phase === "move_king" &&
         !input_locked &&
-        is_human_side("white")
+        is_human_side("white") &&
+        tutorial_allows_action("royal_jump")
     );
 
     el("royal_jump_fill").style.width = `${charge_percentage}%`;
@@ -3013,7 +3434,10 @@ const update_royal_jump_button = function () {
 };
 
 const update_queens_wrath_button = function () {
-    const ready = is_player_two_queen_turn();
+    const ready = (
+        is_player_two_queen_turn() &&
+        tutorial_allows_action("queens_wrath")
+    );
     const visible = game.queen_active || tutorial_shows_queens_wrath();
 
     if (queens_wrath_active) {
@@ -3045,15 +3469,24 @@ const update_queen_progress = function () {
         game.phase === "queen_arrival" ||
         tutorial_shows_queen_meter()
     );
+    const progress_turns = (
+        tutorial_active && tutorial_phase === "practice_queen_countdown"
+        ? tutorial_countdown_turns
+        : game.turn
+    );
     const progress_percentage = Math.min(
-        game.turn / game.target_turns * 100,
+        progress_turns / game.target_turns * 100,
         100
     );
 
     queen_progress_panel.classList.toggle("hidden", !visible);
     el("queen_progress_fill").style.width = `${progress_percentage}%`;
 
-    if (game.queen_active) {
+    if (tutorial_active && tutorial_phase === "practice_queen_countdown") {
+        el("queen_progress_status").textContent = (
+            `${Math.min(progress_turns, game.target_turns)}/${game.target_turns}`
+        );
+    } else if (game.queen_active) {
         el("queen_progress_status").textContent = "Queen Active";
     } else if (game.phase === "royal_guard_arrival") {
         el("queen_progress_status").textContent = "Royal Guard";
@@ -3063,7 +3496,7 @@ const update_queen_progress = function () {
         el("queen_progress_status").textContent = "Arriving...";
     } else {
         el("queen_progress_status").textContent = (
-            `${game.turn}/${game.target_turns}`
+            `${Math.min(progress_turns, game.target_turns)}/${game.target_turns}`
         );
     }
 };
@@ -3216,10 +3649,16 @@ const board_cells = range(0, game.width).map(function (column_index) {
             return;
         }
 
+        const previous_game = game;
+
         game = KingCrossing.place_piece(game, column_index);
         reveal_queen_meter_after_first_piece();
         hovered_column = undefined;
         redraw_board();
+
+        if (game !== previous_game) {
+            advance_practice_after_action("place_piece");
+        }
     };
 
     game_board.append(column_div);
@@ -3247,10 +3686,16 @@ const spawn_wrath_rook_at_position = function (position) {
         return;
     }
 
+    const previous_game = game;
+
     hovered_position = undefined;
     queens_wrath_active = false;
     game = KingCrossing.spawn_wrath_rook(game, position);
     redraw_board();
+
+    if (game !== previous_game) {
+        advance_practice_after_action("spawn_wrath_rook");
+    }
 };
 
 const start_pawn_wave_if_needed = function () {
@@ -3273,14 +3718,21 @@ const move_king_to_position = function (position) {
         return;
     }
 
+    const previous_king = {
+        "column": game.king.column,
+        "row": game.king.row
+    };
+    const using_royal_jump = royal_jump_active;
+
     eagle_vision_active = false;
     royal_jump_active = false;
     hovered_position = undefined;
 
     const previous_phase = game.phase;
     const previous_turn = game.turn;
+    const previous_game = game;
 
-    game = KingCrossing.move_king_to(game, position);
+    game = KingCrossing.move_king_to(game, position, using_royal_jump);
 
     if (
         previous_phase === "move_king" &&
@@ -3295,6 +3747,12 @@ const move_king_to_position = function (position) {
 
     redraw_board();
     start_pawn_wave_if_needed();
+
+    if (game !== previous_game) {
+        advance_practice_after_action("move_king", {
+            "forward": position.row > previous_king.row
+        });
+    }
 };
 
 const attach_cell_handlers = function () {
@@ -3923,11 +4381,17 @@ const confirm_black_piece_selector = function () {
         hovered_column !== undefined &&
         KingCrossing.can_place_piece(game, hovered_column)
     ) {
+        const previous_game = game;
+
         game = KingCrossing.place_piece(game, hovered_column);
         reveal_queen_meter_after_first_piece();
         hovered_column = undefined;
         hovered_position = undefined;
         redraw_board();
+
+        if (game !== previous_game) {
+            advance_practice_after_action("place_piece");
+        }
     }
 };
 
@@ -3994,11 +4458,16 @@ const toggle_black_duel_tool = function () {
         : hovered_position.column
     );
     redraw_board();
+
+    if (queens_wrath_active) {
+        advance_practice_after_action("queens_wrath");
+    }
 };
 
 eagle_vision_button.onclick = function () {
     if (
         input_locked ||
+        !tutorial_allows_action("eagle_vision") ||
         eagle_vision_active ||
         eagle_vision_charge < eagle_vision_max_charge ||
         game.result !== "playing" ||
@@ -4010,6 +4479,7 @@ eagle_vision_button.onclick = function () {
     eagle_vision_active = true;
     eagle_vision_charge = 0;
     redraw_board();
+    advance_practice_after_action("eagle_vision");
 };
 
 royal_jump_button.onclick = function () {
@@ -4019,6 +4489,7 @@ royal_jump_button.onclick = function () {
 
     if (
         input_locked ||
+        !tutorial_allows_action("royal_jump") ||
         royal_jump_active ||
         royal_jump_charge < royal_jump_max_charge ||
         game.result !== "playing" ||
@@ -4030,10 +4501,11 @@ royal_jump_button.onclick = function () {
     royal_jump_active = true;
     royal_jump_charge = 0;
     redraw_board();
+    advance_practice_after_action("royal_jump");
 };
 
 queens_wrath_button.onclick = function () {
-    if (!is_player_two_queen_turn()) {
+    if (!is_player_two_queen_turn() || !tutorial_allows_action("queens_wrath")) {
         return;
     }
 
@@ -4071,12 +4543,24 @@ const reset_game = function () {
 result_dialog.onclick = reset_game;
 result_dialog.onkeydown = reset_game;
 
+const is_native_control_target = function (target) {
+    return (
+        target !== null &&
+        target.closest !== undefined &&
+        target.closest("button, input, textarea, select") !== null
+    );
+};
+
 document.onkeydown = function (event) {
     if (instructions_dialog.open || result_dialog.open) {
         return;
     }
 
-    if (event.key === " ") {
+    if (is_native_control_target(event.target)) {
+        return;
+    }
+
+    if (event.key === " " || event.key === "Enter") {
         event.preventDefault();
         confirm_king_selector();
         confirm_black_piece_selector();

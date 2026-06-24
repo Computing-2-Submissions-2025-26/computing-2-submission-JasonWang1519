@@ -671,6 +671,13 @@ aside > *
     filter: grayscale(0.6) brightness(0.75);
 }
 
+.tutorial_practice_mode #eagle_vision_button:disabled,
+.tutorial_practice_mode #royal_jump_button:disabled,
+.tutorial_practice_mode #queens_wrath_button:disabled
+{
+    filter: blur(1.2px) grayscale(0.75) brightness(0.58);
+}
+
 #eagle_vision_label,
 #royal_jump_label,
 #queens_wrath_label,
@@ -1286,20 +1293,20 @@ aside > *
     box-shadow: 0 0 22px #000000cc;
     color: #ffffff;
     font-family: Georgia, "Times New Roman", serif;
-    font-size: 17pt;
+    font-size: 18pt;
     font-weight: bold;
     left: 18px;
-    line-height: 1.25;
-    max-height: 46vh;
+    line-height: 1.24;
+    max-height: 54vh;
     overflow: hidden;
-    padding: 1em 1.05em 2em;
+    padding: 1.08em 1.18em 2.15em;
     pointer-events: none;
     position: fixed;
     text-align: left;
     text-shadow: 0 0 14px #000000;
     top: 260px;
     transform: none;
-    width: 340px;
+    width: 430px;
     z-index: 1600;
 }
 
@@ -1311,6 +1318,11 @@ aside > *
     font-size: 11pt;
     left: 1.45em;
     position: absolute;
+}
+
+.tutorial_practice_mode #tutorial_text::after
+{
+    content: "Do this step";
 }
 
 .tutorial_board_focus_mode header,
@@ -1330,6 +1342,11 @@ aside > *
     filter: blur(3px) brightness(0.45) !important;
 }
 
+.tutorial_practice_mode.tutorial_board_focus_mode #game_board .board_cell
+{
+    filter: none !important;
+}
+
 .tutorial_board_focus_mode #game_board .tutorial_focus_cell
 {
     box-shadow:
@@ -1338,6 +1355,60 @@ aside > *
     filter: none !important;
     position: relative;
     z-index: 30;
+}
+
+#tutorial_queen_countdown
+{
+    align-items: center;
+    background: #111111e8;
+    border: 1px solid #f3d36b;
+    border-radius: 18px;
+    box-shadow:
+        0 0 30px #000000,
+        0 0 24px #f3d36b80;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2em;
+    left: 50%;
+    min-width: 260px;
+    padding: 1.1em 1.4em;
+    pointer-events: none;
+    position: fixed;
+    top: 160px;
+    transform: translateX(-50%);
+    z-index: 1800;
+}
+
+#tutorial_queen_countdown_icon
+{
+    color: var(--queen-gold);
+    filter: drop-shadow(0 0 12px var(--queen-purple));
+    font-size: 44pt;
+    line-height: 0.9;
+}
+
+#tutorial_queen_countdown_label
+{
+    font-size: 16pt;
+    font-weight: bold;
+}
+
+#tutorial_queen_countdown_turns
+{
+    color: var(--button-green-hover);
+    font-size: 28pt;
+    font-weight: bold;
+}
+
+.tutorial_countdown_mode #tutorial_text::after
+{
+    content: "Watch the counter";
+}
+
+.tutorial_continue_mode #tutorial_text::after
+{
+    content: "Click when ready";
 }
 
 .tutorial_rule_square
@@ -1454,43 +1525,36 @@ aside > *
         0 0 18px #88b7de;
 }
 
-#tutorial_mouse
+.tutorial_guided_square
 {
-    color: #f7efe2;
-    filter: drop-shadow(0 3px 4px #000000);
-    font-family: Arial, sans-serif;
-    font-size: 26pt;
-    left: 0;
-    pointer-events: none;
-    position: fixed;
-    text-shadow:
-        -1px -1px 0 #111111,
-        1px -1px 0 #111111,
-        -1px 1px 0 #111111,
-        1px 1px 0 #111111;
-    top: 0;
-    transform: translate(-15%, -10%) rotate(-24deg);
-    transition: transform 120ms ease;
-    z-index: 2500;
+    box-shadow:
+        0 0 0 4px #ffffff inset,
+        0 0 18px #ffffffcc,
+        0 0 32px #f7df6f99;
 }
 
-#tutorial_mouse.tutorial_mouse_clicking
+.tutorial_guided_white
 {
-    transform: translate(-15%, -10%) rotate(-24deg) scale(0.82);
+    outline: 4px solid #ffffff;
+    outline-offset: -7px;
 }
 
-#tutorial_mouse.tutorial_mouse_clicking::after
+.tutorial_guided_black
 {
-    color: var(--banner-colour);
-    content: "click";
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 11pt;
-    font-weight: bold;
-    left: 28px;
-    position: absolute;
-    text-shadow: 0 0 8px #000000;
-    top: 22px;
-    transform: rotate(24deg);
+    outline: 4px solid #f7df6f;
+    outline-offset: -7px;
+}
+
+.tutorial_guided_royal_jump
+{
+    outline: 4px solid #f7df6f;
+    outline-offset: -7px;
+}
+
+.tutorial_guided_suggested
+{
+    outline: 4px solid #ffffff;
+    outline-offset: -7px;
 }
 
 .tutorial_ability_clicked
@@ -1572,6 +1636,16 @@ aside > *
     }
 }
 
+@media (min-width: 901px) and (max-width: 1400px)
+{
+    #tutorial_text
+    {
+        font-size: 15pt;
+        max-height: 48vh;
+        width: 310px;
+    }
+}
+
 body.tutorial_focus_abilities #eagle_vision_button,
 body.tutorial_focus_abilities #royal_jump_button,
 body.tutorial_focus_queens_wrath #queens_wrath_button,
@@ -1582,6 +1656,14 @@ body.tutorial_focus_queen_meter #queen_progress_panel
         0 0 24px var(--banner-colour);
     filter: none !important;
     z-index: 1500;
+}
+
+body.tutorial_practice_mode #eagle_vision_button:disabled,
+body.tutorial_practice_mode #royal_jump_button:disabled,
+body.tutorial_practice_mode #queens_wrath_button:disabled
+{
+    box-shadow: none;
+    filter: blur(1.2px) grayscale(0.75) brightness(0.58) !important;
 }
 
 @keyframes turn_glow_rise
