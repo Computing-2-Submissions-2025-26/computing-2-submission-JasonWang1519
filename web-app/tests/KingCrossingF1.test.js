@@ -240,6 +240,10 @@ describe("King's Crossing", function () {
             KingCrossing.can_spawn_wrath_rook(game, {column: 0, row: 8}),
             false
         );
+        assert.equal(
+            KingCrossing.can_spawn_wrath_rook(game, {column: 0, row: 7}),
+            false
+        );
     });
 
     it("lets White win the final duel by reaching the royal guard row", function () {

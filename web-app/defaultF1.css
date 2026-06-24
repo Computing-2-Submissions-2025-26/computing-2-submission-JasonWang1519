@@ -638,18 +638,18 @@ aside > *
 
 #queens_wrath_button
 {
-    bottom: 16px;
+    bottom: 44px;
     cursor: pointer;
-    min-width: 180px;
-    right: 16px;
+    min-width: 220px;
+    right: 24px;
     text-align: left;
 }
 
 #queen_progress_panel
 {
-    bottom: 112px;
+    bottom: 150px;
     min-width: 220px;
-    right: 16px;
+    right: 24px;
     text-align: left;
 }
 

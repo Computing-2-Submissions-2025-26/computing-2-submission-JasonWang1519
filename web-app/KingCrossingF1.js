@@ -62,6 +62,7 @@ const PAWN_WALL_DANGER_ROW = 1;
 const FIRST_TURN = 0;
 const NO_DODGES = 0;
 const QUEEN_ENTRY_ROW_OFFSET = 3;
+const ROYAL_GUARD_ESCAPE_ROW_OFFSET = 2;
 const MAXIMUM_DODGE_MOVES = 2;
 
 const EMPTY_TOKEN = 0;
@@ -1063,6 +1064,7 @@ KingCrossing.can_spawn_wrath_rook = function (game, target_position) {
         !game.queen_active ||
         game.queen === undefined ||
         !KingCrossing.is_inside_grid(game, target_position) ||
+        target_position.row === game.height - ROYAL_GUARD_ESCAPE_ROW_OFFSET ||
         KingCrossing.is_pawn_wall(game, target_position) ||
         KingCrossing.is_royal_guard(game, target_position) ||
         is_any_piece_at(game, target_position) ||

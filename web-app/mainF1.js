@@ -397,6 +397,7 @@ const tutorial_practice_steps = Object.freeze([
         "phase": "practice_crossing_story",
         "focus": "crossing_story",
         "action": "continue",
+        "setup": "crossing_story",
         "text": (
             "The crossing begins with a simple rhythm: Player 2 controls " +
             "Black and places pressure from the top row, while Player 1 " +
@@ -429,8 +430,7 @@ const tutorial_practice_steps = Object.freeze([
         "text": (
             "Player 2 continues the Black Pieces cycle. After the pawn " +
             "comes the knight. A knight protects L-shaped squares, so the " +
-            "highlighted file sets up pressure that can defend another " +
-            "piece later."
+            "gold file lets it defend the pawn from a distance."
         )
     }),
     Object.freeze({
@@ -517,8 +517,8 @@ const tutorial_practice_steps = Object.freeze([
         "focus": "queen_phase",
         "action": "spawn_wrath_rook",
         "text": (
-            "Place the rook on a legal gold square. It must appear safely, " +
-            "not on a square that gives the king an instant direct check."
+            "Place the rook on a legal gold square. Use it to close space " +
+            "around the king while the queen still keeps watch."
         )
     })
 ]);
@@ -564,6 +564,16 @@ const set_tutorial_guided_square = function (position, kind = "suggested") {
 
 const clear_tutorial_guided_square = function () {
     set_tutorial_guided_square(undefined);
+};
+
+const show_tutorial_step_message = function (message) {
+    const step = current_practice_step();
+
+    if (step === undefined) {
+        return;
+    }
+
+    tutorial_text.textContent = `${step.text} ${message}`;
 };
 
 const square_colour_class = function (position) {
@@ -1146,6 +1156,16 @@ const prepare_practice_queen_countdown = function () {
 };
 
 const apply_practice_step_setup = function (step) {
+    if (step.setup === "crossing_story") {
+        start_opening_animation();
+    } else {
+        clearTimeout(opening_timer);
+        opening_active = false;
+        opening_phase = "none";
+        opening_king_row = -1;
+        opening_pawn_column = -1;
+    }
+
     if (step.setup === "queen_countdown") {
         prepare_practice_queen_countdown();
     }
@@ -1172,18 +1192,7 @@ const show_current_practice_step = function () {
     document.body.classList.remove("tutorial_continue_mode");
 
     if (step === undefined) {
-        tutorial_phase = "practice_complete";
-        tutorial_focus = "none";
-        tutorial_text.textContent = (
-            "You have now played the main loop yourself. Start a fresh match " +
-            "when you are ready."
-        );
-        tutorial_text.classList.remove("hidden");
-        tutorial_control_button.textContent = "Start match";
-        input_locked = true;
-        update_tutorial_focus_class();
-        update_tutorial_slide_number();
-        redraw_board();
+        skip_tutorial_to_game();
         return;
     }
 
@@ -2328,14 +2337,14 @@ const tutorial_recommended_placement_square = function (step) {
 
     if (step.phase === "practice_place_knight") {
         return {
-            "column": preferred_tutorial_column(columns, 1),
+            "column": preferred_tutorial_column(columns, 2),
             "row": game.height - 1
         };
     }
 
     if (step.phase === "practice_place_bishop") {
         return {
-            "column": preferred_tutorial_column(columns, 3),
+            "column": preferred_tutorial_column(columns, 4),
             "row": game.height - 1
         };
     }
@@ -2395,6 +2404,34 @@ const is_tutorial_guided_square = function (position) {
         tutorial_active &&
         same_position(position, tutorial_recommended_square())
     );
+};
+
+const tutorial_requires_guided_square = function (action) {
+    const step = current_practice_step();
+
+    return (
+        tutorial_active &&
+        tutorial_mode === "practice" &&
+        step !== undefined &&
+        step.action === action &&
+        (
+            action === "place_piece" ||
+            action === "move_king" ||
+            action === "spawn_wrath_rook"
+        )
+    );
+};
+
+const tutorial_accepts_guided_square = function (action, position) {
+    if (!tutorial_requires_guided_square(action)) {
+        return true;
+    }
+
+    return same_position(position, tutorial_recommended_square());
+};
+
+const remind_guided_square = function () {
+    show_tutorial_step_message("Try the gold square first.");
 };
 
 const tutorial_guided_square_kind = function () {
@@ -3649,6 +3686,17 @@ const board_cells = range(0, game.width).map(function (column_index) {
             return;
         }
 
+        const selected_position = {
+            "column": column_index,
+            "row": game.height - 1
+        };
+
+        if (!tutorial_accepts_guided_square("place_piece", selected_position)) {
+            remind_guided_square();
+            redraw_board();
+            return;
+        }
+
         const previous_game = game;
 
         game = KingCrossing.place_piece(game, column_index);
@@ -3686,6 +3734,12 @@ const spawn_wrath_rook_at_position = function (position) {
         return;
     }
 
+    if (!tutorial_accepts_guided_square("spawn_wrath_rook", position)) {
+        remind_guided_square();
+        redraw_board();
+        return;
+    }
+
     const previous_game = game;
 
     hovered_position = undefined;
@@ -3715,6 +3769,12 @@ const start_pawn_wave_if_needed = function () {
 
 const move_king_to_position = function (position) {
     if (!is_player_one_turn() || !is_king_move_hint_square(position)) {
+        return;
+    }
+
+    if (!tutorial_accepts_guided_square("move_king", position)) {
+        remind_guided_square();
+        redraw_board();
         return;
     }
 
@@ -3776,6 +3836,22 @@ const attach_cell_handlers = function () {
 
             cell.onclick = function (event) {
                 if (consume_tutorial_followup_click(event)) {
+                    return;
+                }
+
+                if (
+                    (
+                        tutorial_requires_guided_square("move_king") ||
+                        tutorial_requires_guided_square("spawn_wrath_rook")
+                    ) &&
+                    !tutorial_accepts_guided_square(
+                        current_practice_step().action,
+                        position
+                    )
+                ) {
+                    event.stopPropagation();
+                    remind_guided_square();
+                    redraw_board();
                     return;
                 }
 
@@ -4075,7 +4151,13 @@ const finish_opening_animation = function () {
     opening_phase = "done";
     opening_pawn_column = -1;
 
-    if (tutorial_active && tutorial_phase === "pawn_chase") {
+    if (
+        tutorial_active &&
+        (
+            tutorial_phase === "pawn_chase" ||
+            tutorial_phase === "practice_crossing_story"
+        )
+    ) {
         input_locked = true;
         redraw_board();
         return;
@@ -4381,6 +4463,17 @@ const confirm_black_piece_selector = function () {
         hovered_column !== undefined &&
         KingCrossing.can_place_piece(game, hovered_column)
     ) {
+        const selected_position = {
+            "column": hovered_column,
+            "row": game.height - 1
+        };
+
+        if (!tutorial_accepts_guided_square("place_piece", selected_position)) {
+            remind_guided_square();
+            redraw_board();
+            return;
+        }
+
         const previous_game = game;
 
         game = KingCrossing.place_piece(game, hovered_column);
