@@ -10,10 +10,7 @@ const final_duel_game = function () {
 };
 
 const with_state = function (game, changes) {
-    return Object.freeze({
-        ...game,
-        ...changes
-    });
+    return Object.freeze(Object.assign({}, game, changes));
 };
 
 const explain_game = function (game) {

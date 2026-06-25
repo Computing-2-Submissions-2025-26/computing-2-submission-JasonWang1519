@@ -1,5 +1,5 @@
 /*jslint browser: true */
-import KingCrossing from "./KingCrossing.js?v=kings-crossing";
+import KingCrossing from "./KingCrossing.js";
 
 const piece_symbols = [
     "",
@@ -4185,7 +4185,7 @@ const redraw_board = function () {
             };
 
             const base_token = (
-                is_extra_top_row(position) || is_extra_bottom_row(position)
+                (is_extra_top_row(position) || is_extra_bottom_row(position))
                 ? 0
                 : KingCrossing.cell_token(game, position)
             );
