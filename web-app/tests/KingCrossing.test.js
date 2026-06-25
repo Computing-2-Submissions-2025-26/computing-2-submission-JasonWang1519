@@ -200,6 +200,26 @@ describe("King's Crossing", function () {
         assert.notStrictEqual(jumped_game, game);
     });
 
+    it("reports Royal Jump targets through the public API", function () {
+        const game = KingCrossing.place_piece(KingCrossing.create_game(), 0);
+        const jump_square = {column: 6, row: 3};
+
+        assert.equal(
+            includes_position(
+                KingCrossing.legal_king_targets(game),
+                jump_square
+            ),
+            false
+        );
+        assert.equal(
+            includes_position(
+                KingCrossing.legal_king_targets(game, true),
+                jump_square
+            ),
+            true
+        );
+    });
+
     it("scrolls by the upward distance of a Royal Jump", function () {
         const game = KingCrossing.place_piece(KingCrossing.create_game(), 0);
         const jump_square = {column: 4, row: 4};

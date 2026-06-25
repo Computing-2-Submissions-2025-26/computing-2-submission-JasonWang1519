@@ -161,6 +161,12 @@ const same_position = function (first, second) {
     );
 };
 
+const positions_include = function (positions, position) {
+    return positions.some(function (test_position) {
+        return same_position(position, test_position);
+    });
+};
+
 const current_practice_step = function () {
     if (!tutorial_active || tutorial_mode !== "practice") {
         return undefined;
@@ -2289,42 +2295,8 @@ const is_ghost_piece_square = function (base_token, position) {
     );
 };
 
-const normal_king_offsets = Object.freeze([
-    {"column": -1, "row": 1},
-    {"column": 0, "row": 1},
-    {"column": 1, "row": 1},
-    {"column": -1, "row": 0},
-    {"column": 1, "row": 0},
-    {"column": -1, "row": -1},
-    {"column": 0, "row": -1},
-    {"column": 1, "row": -1}
-]);
-
-const royal_jump_offsets = Object.freeze(
-    range(-2, 3).reduce(function (offsets, column_offset) {
-        return offsets.concat(
-            range(-2, 3).map(function (row_offset) {
-                return {
-                    "column": column_offset,
-                    "row": row_offset
-                };
-            })
-        );
-    }, []).filter(function (offset) {
-        return !(offset.column === 0 && offset.row === 0);
-    })
-);
-
 const royal_jump_available = function () {
     return game.queen_active || royal_jump_active;
-};
-
-const active_king_offsets = function () {
-    if (game.queen_active || royal_jump_active) {
-        return royal_jump_offsets;
-    }
-
-    return normal_king_offsets;
 };
 
 const is_tutorial_countdown_king_turn = function () {
@@ -2332,18 +2304,6 @@ const is_tutorial_countdown_king_turn = function () {
         tutorial_active &&
         tutorial_phase === "practice_queen_countdown" &&
         game.phase === "move_king"
-    );
-};
-
-const is_piece_on_square = function (position) {
-    const token = KingCrossing.cell_token(game, position);
-
-    return (
-        token === 2 ||
-        token === 4 ||
-        token === 5 ||
-        token === 6 ||
-        token === 7
     );
 };
 
@@ -2360,59 +2320,14 @@ const is_inside_board = function (position) {
     );
 };
 
-const is_possible_king_range_square = function (position) {
-    if (!is_player_one_turn() && !is_tutorial_countdown_king_turn()) {
-        return false;
-    }
-
-    if (!is_inside_board(position)) {
-        return false;
-    }
-
-    return active_king_offsets().some(function (offset) {
-        return same_position(position, {
-            "column": game.king.column + offset.column,
-            "row": game.king.row + offset.row
-        });
-    });
-};
-
-const is_legal_king_hint_square = function (position) {
-    if (!is_possible_king_range_square(position)) {
-        return false;
-    }
-
-    if (KingCrossing.is_pawn_wall(game, position)) {
-        return false;
-    }
-
-    if (KingCrossing.is_royal_guard(game, position)) {
-        return false;
-    }
-
-    if (KingCrossing.cell_token(game, position) === 5) {
-        return false;
-    }
-
-    if (
-        is_piece_on_square(position) &&
-        KingCrossing.cell_token(game, position) !== 5 &&
-        KingCrossing.is_piece_defended(game, position)
-    ) {
-        return false;
-    }
-
-    return true;
-};
-
 const is_king_move_hint_square = function (position) {
-    return is_legal_king_hint_square(position);
+    return positions_include(legal_king_positions(), position);
 };
 
 const is_royal_jump_range_square = function (position) {
     return (
         royal_jump_available() &&
-        is_possible_king_range_square(position)
+        is_king_move_hint_square(position)
     );
 };
 
@@ -2437,14 +2352,14 @@ const is_queen_move_hint_square = function (position) {
         tutorial_allows_action("move_queen") &&
         is_player_two_queen_turn() &&
         !queens_wrath_active &&
-        KingCrossing.is_queen_move_legal(game, position)
+        positions_include(legal_queen_positions(), position)
     );
 };
 
 const is_queens_wrath_hint_square = function (position) {
     return (
         is_queens_wrath_turn() &&
-        KingCrossing.can_spawn_wrath_rook(game, position)
+        positions_include(legal_wrath_positions(), position)
     );
 };
 
@@ -4053,33 +3968,24 @@ const continue_pawn_wave = function () {
     );
 };
 
-const all_board_positions = function () {
-    return range(0, game.width).reduce(function (positions, column) {
-        return positions.concat(range(0, game.height).map(function (row) {
-            return {
-                "column": column,
-                "row": row
-            };
-        }));
-    }, []);
-};
-
 const legal_king_positions = function () {
-    return all_board_positions().filter(is_king_move_hint_square);
+    if (!is_player_one_turn() && !is_tutorial_countdown_king_turn()) {
+        return [];
+    }
+
+    return KingCrossing.legal_king_targets(game, royal_jump_active);
 };
 
 const legal_queen_positions = function () {
-    return all_board_positions().filter(is_queen_move_hint_square);
+    return KingCrossing.legal_queen_targets(game);
 };
 
 const legal_wrath_positions = function () {
-    return all_board_positions().filter(is_queens_wrath_hint_square);
+    return KingCrossing.legal_wrath_targets(game);
 };
 
 const legal_black_placement_columns = function () {
-    return range(0, game.width).filter(function (column) {
-        return KingCrossing.can_place_piece(game, column);
-    });
+    return KingCrossing.legal_placement_columns(game);
 };
 
 const first_legal_position = function (positions) {

@@ -1263,10 +1263,11 @@ const legal_king_targets = function (game, royal_jump = false) {
  * @memberof KingCrossing
  * @function legal_king_targets
  * @param {Game} game The current game state.
+ * @param {boolean} [royal_jump=false] Include Royal Jump range.
  * @returns {Position[]} Legal king target squares.
  */
-KingCrossing.legal_king_targets = function (game) {
-    return legal_king_targets(game).map(copy_position);
+KingCrossing.legal_king_targets = function (game, royal_jump = false) {
+    return legal_king_targets(game, royal_jump).map(copy_position);
 };
 
 /**
