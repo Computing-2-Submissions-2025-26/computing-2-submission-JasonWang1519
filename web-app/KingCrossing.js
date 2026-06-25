@@ -549,6 +549,14 @@ const sealed_game = function (game) {
     return game_with_result(game, "sealed", undefined);
 };
 
+const king_reached_escape_row = function (game) {
+    return (
+        game.queen_active &&
+        game.royal_guard_active &&
+        game.king.row >= game.height - 2
+    );
+};
+
 const begin_royal_guard_arrival = function (game) {
     return game_with_phase(game, "royal_guard_arrival");
 };
@@ -929,15 +937,16 @@ KingCrossing.move_king_to = function (
         undefined
     );
 
+    if (king_reached_escape_row(moved_game)) {
+        return win_game(moved_game);
+    }
+
     const safety_checked = check_king_safety_after_move(moved_game);
     if (safety_checked.result !== "playing") {
         return safety_checked;
     }
 
-    if (
-        safety_checked.queen_active &&
-        safety_checked.king.row >= safety_checked.height - 2
-    ) {
+    if (king_reached_escape_row(safety_checked)) {
         return win_game(safety_checked);
     }
 

@@ -334,6 +334,32 @@ describe("King's Crossing", function () {
         );
     });
 
+    it("lets the escape row beat queen control in the final duel", function () {
+        const game = with_state(KingCrossing.create_game(), {
+            phase: "move_king",
+            result: "playing",
+            turn: 12,
+            queen_active: true,
+            royal_guard_active: true,
+            king: {column: 4, row: 6},
+            queen: {column: 4, row: 4},
+            pieces: []
+        });
+
+        const won_game = KingCrossing.move_king_to(
+            game,
+            {column: 4, row: 7}
+        );
+
+        assert.equal(
+            won_game.result,
+            "won",
+            "Touching the row under the royal guard should end the crossing,\n" +
+            "even if the queen controls that square.\n" +
+            explain_game(won_game)
+        );
+    });
+
     it("chooses a legal queen action for the Black AI", function () {
         const game = final_duel_game();
         const action = KingCrossing.choose_ai_queen_action(game);
