@@ -260,16 +260,46 @@ instructions_dialog.setAttribute("aria-labelledby", "instructions_heading");
 instructions_dialog.innerHTML = `
     <section id="instructions_card">
         <h2 id="instructions_heading">How to Play</h2>
-        <p><strong>White Pieces:</strong> guide the king upward and look for a clear route through the crossing.</p>
-        <p><strong>Black Pieces:</strong> choose where new threats appear on the top row and try to close the route.</p>
+        <p>
+            <strong>White Pieces:</strong> guide the king upward and look for
+            a clear route through the crossing.
+        </p>
+        <p>
+            <strong>Black Pieces:</strong> choose where new threats appear on
+            the top row and try to close the route.
+        </p>
         <p>You can play with the mouse by clicking a legal square.</p>
-        <p>You can also play with the keyboard like a remote: move the selector, then press <strong>Space</strong> to confirm.</p>
-        <p>White uses <strong>W A S D</strong> to choose the king's square. Black uses the <strong>Left</strong> and <strong>Right</strong> arrows when placing a new piece.</p>
-        <p>In the queen duel, Black presses <strong>Tab</strong> to switch between the queen and Queen's Wrath, uses the arrow keys to choose a legal square, then presses <strong>Space</strong>.</p>
-        <p><strong>Eagle Vision</strong> reveals danger. <strong>Royal Jump</strong> gives the king a longer leap when it is charged.</p>
-        <p>White has the harder role because the king must keep finding safe routes while the wall and Black Pieces close in.</p>
-        <p>The queen counter appears after Black's first move. When it fills, the Grand Regent Queen arrives.</p>
-        <p>White wins by reaching the row beneath the royal guard. Black wins by trapping the king or sealing the crossing.</p>
+        <p>
+            You can also play with the keyboard like a remote: move the
+            selector, then press <strong>Space</strong> to confirm.
+        </p>
+        <p>
+            White uses <strong>W A S D</strong> to choose the king's square.
+            Black uses the <strong>Left</strong> and
+            <strong>Right</strong> arrows when placing a new piece.
+        </p>
+        <p>
+            In the queen duel, Black presses <strong>Tab</strong> to switch
+            between the queen and Queen's Wrath, uses the arrow keys to choose
+            a legal square, then presses <strong>Space</strong>.
+        </p>
+        <p>
+            <strong>Eagle Vision</strong> reveals danger.
+            <strong>Royal Jump</strong> gives the king a longer leap when it is
+            charged.
+        </p>
+        <p>
+            White has the harder role because the king must keep finding safe
+            routes while the wall and Black Pieces close in.
+        </p>
+        <p>
+            The queen counter appears after Black's first move. When it fills,
+            the Grand Regent Queen arrives.
+        </p>
+        <p>
+            White wins by reaching the row beneath the royal guard. Black wins
+            by trapping the king or sealing the crossing.
+        </p>
         <p class="click_hint">Click anywhere to close.</p>
     </section>
 `;
@@ -306,7 +336,10 @@ const tutorial_control_button = document.createElement("button");
 tutorial_control_button.id = "tutorial_control_button";
 tutorial_control_button.type = "button";
 tutorial_control_button.textContent = "Skip tutorial";
-tutorial_control_button.setAttribute("aria-label", "Start or skip the tutorial");
+tutorial_control_button.setAttribute(
+    "aria-label",
+    "Start or skip the tutorial"
+);
 document.body.append(tutorial_control_button);
 
 const tutorial_slide_number = document.createElement("div");
@@ -357,8 +390,8 @@ const tutorial_rule_steps = Object.freeze([
         "phase": "rule_pawn_wall",
         "focus": "danger_row",
         "text": (
-            "The pawn wall keeps climbing. Stay off the wall and the row just " +
-            "above it."
+            "The pawn wall keeps climbing. Stay off the wall and the row " +
+            "just above it."
         )
     }),
     Object.freeze({
@@ -372,7 +405,8 @@ const tutorial_rule_steps = Object.freeze([
         "phase": "rule_bishop_defended",
         "focus": "enemy_attacks",
         "text": (
-            "If another black piece protects it, that capture is no longer safe."
+            "If another black piece protects it, that capture is no longer " +
+            "safe."
         )
     }),
     Object.freeze({
@@ -484,8 +518,8 @@ const tutorial_practice_steps = Object.freeze([
         "focus": "king",
         "action": "move_king",
         "text": (
-            "Royal Jump only lasts for this move. Choose one of the gold dots " +
-            "and leap before Black closes in."
+            "Royal Jump only lasts for this move. Choose one of the gold " +
+            "dots and leap before Black closes in."
         )
     }),
     Object.freeze({
@@ -1255,7 +1289,10 @@ const show_current_practice_step = function () {
     document.body.classList.remove("tutorial_start_mode");
     document.body.classList.add("tutorial_board_focus_mode");
     document.body.classList.add("tutorial_practice_mode");
-    document.body.classList.toggle("tutorial_continue_mode", step.action === "continue");
+    document.body.classList.toggle(
+        "tutorial_continue_mode",
+        step.action === "continue"
+    );
     update_tutorial_focus_class();
     apply_practice_step_setup(step);
     update_tutorial_slide_number();
@@ -1825,7 +1862,8 @@ const tutorial_knight_position = function () {
 };
 
 const tutorial_placing_column = function (elapsed, start, end, columns) {
-    const progress = Math.min(Math.max((elapsed - start) / (end - start), 0), 1);
+    const raw_progress = (elapsed - start) / (end - start);
+    const progress = Math.min(Math.max(raw_progress, 0), 1);
     const index = Math.min(
         Math.floor(progress * columns.length),
         columns.length - 1
@@ -1851,7 +1889,11 @@ const tutorial_placing_knight_column = function () {
 
     const travel = elapsed - tutorial_knight_place_start_time;
     const first_leg = 1450;
-    const second_leg = tutorial_place_click_time - tutorial_knight_place_start_time - first_leg;
+    const second_leg = (
+        tutorial_place_click_time -
+        tutorial_knight_place_start_time -
+        first_leg
+    );
 
     if (travel < first_leg) {
         return 2 + 4 * (travel / first_leg);
@@ -1930,7 +1972,10 @@ const tutorial_queen_wrath_elapsed = function () {
 };
 
 const tutorial_queen_vision_elapsed = function () {
-    return (Date.now() - tutorial_animation_start) % tutorial_queen_vision_cycle;
+    return (
+        (Date.now() - tutorial_animation_start) %
+        tutorial_queen_vision_cycle
+    );
 };
 
 const tutorial_queen_wrath_armed = function () {
@@ -2716,7 +2761,13 @@ const is_tutorial_countdown_king_turn = function () {
 const is_piece_on_square = function (position) {
     const token = KingCrossing.cell_token(game, position);
 
-    return token === 2 || token === 4 || token === 5 || token === 6 || token === 7;
+    return (
+        token === 2 ||
+        token === 4 ||
+        token === 5 ||
+        token === 6 ||
+        token === 7
+    );
 };
 
 const is_inside_board = function (position) {
@@ -3319,7 +3370,10 @@ const is_tutorial_queen_vision_click_pulse = function () {
 };
 
 const update_tutorial_ability_demo = function () {
-    const stage_active = tutorial_active && tutorial_phase === "rule_stage_goal";
+    const stage_active = (
+        tutorial_active &&
+        tutorial_phase === "rule_stage_goal"
+    );
     const queen_wrath_active = (
         tutorial_active && tutorial_phase === "rule_queen_wrath"
     );
@@ -3364,7 +3418,9 @@ const update_tutorial_ability_demo = function () {
             tutorial_place_elapsed() >= tutorial_place_click_time + 1800
         ) {
             el("queen_progress_status").textContent = `1/${game.target_turns}`;
-            el("queen_progress_fill").style.width = `${100 / game.target_turns}%`;
+            el("queen_progress_fill").style.width = (
+                `${100 / game.target_turns}%`
+            );
         }
 
         return;
@@ -3592,14 +3648,15 @@ const update_queen_progress = function () {
         progress_turns / game.target_turns * 100,
         100
     );
+    const progress_label = (
+        `${Math.min(progress_turns, game.target_turns)}/${game.target_turns}`
+    );
 
     queen_progress_panel.classList.toggle("hidden", !visible);
     el("queen_progress_fill").style.width = `${progress_percentage}%`;
 
     if (tutorial_active && tutorial_phase === "practice_queen_countdown") {
-        el("queen_progress_status").textContent = (
-            `${Math.min(progress_turns, game.target_turns)}/${game.target_turns}`
-        );
+        el("queen_progress_status").textContent = progress_label;
     } else if (game.queen_active) {
         el("queen_progress_status").textContent = "Queen Active";
     } else if (game.phase === "royal_guard_arrival") {
@@ -3609,9 +3666,7 @@ const update_queen_progress = function () {
     } else if (game.phase === "queen_arrival") {
         el("queen_progress_status").textContent = "Arriving...";
     } else {
-        el("queen_progress_status").textContent = (
-            `${Math.min(progress_turns, game.target_turns)}/${game.target_turns}`
-        );
+        el("queen_progress_status").textContent = progress_label;
     }
 };
 
@@ -3933,7 +3988,10 @@ const attach_cell_handlers = function () {
                     return;
                 }
 
-                if (is_player_one_turn() && is_king_move_hint_square(position)) {
+                if (
+                    is_player_one_turn() &&
+                    is_king_move_hint_square(position)
+                ) {
                     event.stopPropagation();
                     move_king_to_position(position);
                     return;
@@ -3970,21 +4028,24 @@ const open_result_dialog = function () {
     if (game.result === "won") {
         el("result_winner").textContent = "Player 1 wins";
         el("result_message").textContent = (
-            "The king reached the royal boundary and escaped the Grand Regent Queen."
+            "The king reached the royal boundary and escaped the Grand " +
+            "Regent Queen."
         );
     }
 
     if (game.result === "sealed") {
         el("result_winner").textContent = "Player 2 wins";
         el("result_message").textContent = (
-            "The black pieces filled the road ahead. The king was trapped between the soldiers and the pawn wall."
+            "The black pieces filled the road ahead. The king was trapped " +
+            "between the soldiers and the pawn wall."
         );
     }
 
     if (game.result === "lost") {
         el("result_winner").textContent = "Player 2 wins";
         el("result_message").textContent = (
-            `The king moved into a square controlled by ${piece_name(game.attacker)}.`
+            "The king moved into a square controlled by " +
+            `${piece_name(game.attacker)}.`
         );
     }
 
@@ -4144,7 +4205,9 @@ const redraw_board = function () {
 
     if (tutorial_active && tutorial_phase === "rule_place_piece") {
         el("home_ready").textContent = "White Pieces: wait for Black.";
-        el("away_ready").textContent = "Black Pieces cycle: Pawn, Knight, Bishop.";
+        el("away_ready").textContent = (
+            "Black Pieces cycle: Pawn, Knight, Bishop."
+        );
     } else if (tutorial_active && tutorial_focus === "king") {
         el("home_ready").textContent = "White Pieces: guide the king.";
         el("away_ready").textContent = "Black Pieces wait.";
@@ -4160,10 +4223,14 @@ const redraw_board = function () {
             el("away_ready").textContent = "Prepare to place the first piece.";
         }
     } else if (game.phase === "royal_guard_arrival") {
-        el("home_ready").textContent = "White Pieces reached the royal boundary.";
+        el("home_ready").textContent = (
+            "White Pieces reached the royal boundary."
+        );
         el("away_ready").textContent = "Black Pieces summon the royal guard.";
     } else if (game.phase === "queen_arrival") {
-        el("home_ready").textContent = "White Pieces: prepare for the final duel.";
+        el("home_ready").textContent = (
+            "White Pieces: prepare for the final duel."
+        );
         el("away_ready").textContent = (
             "The Grand Regent Queen clears the road."
         );
@@ -4184,7 +4251,9 @@ const redraw_board = function () {
         el("home_ready").textContent = (
             "Final Duel: reach the row beneath the royal guard."
         );
-        el("away_ready").textContent = "The Grand Regent Queen controls the board.";
+        el("away_ready").textContent = (
+            "The Grand Regent Queen controls the board."
+        );
     } else if (game.phase === "place_piece" && game.result === "playing") {
         el("home_ready").textContent = (
             is_ai_side("black")
@@ -4699,7 +4768,10 @@ royal_jump_button.onclick = function () {
 };
 
 queens_wrath_button.onclick = function () {
-    if (!is_player_two_queen_turn() || !tutorial_allows_action("queens_wrath")) {
+    if (
+        !is_player_two_queen_turn() ||
+        !tutorial_allows_action("queens_wrath")
+    ) {
         return;
     }
 

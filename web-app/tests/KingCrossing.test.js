@@ -55,7 +55,7 @@ const play_guided_tutorial_countdown = function () {
     let game = KingCrossing.create_game();
     let safety_counter = 0;
 
-    // These are the player-guided tutorial moves before the fast-forward begins.
+    // These are the tutorial moves before the fast-forward begins.
     // The countdown should continue from this board, not reset to a fresh game.
     game = KingCrossing.place_piece(game, 4);
     game = KingCrossing.move_king_to(game, {column: 4, row: 3});
@@ -134,7 +134,7 @@ describe("King's Crossing", function () {
         );
     });
 
-    it("allows a two-square king move only when Royal Jump is used", function () {
+    it("allows a two-square king move with Royal Jump", function () {
         const game = KingCrossing.place_piece(KingCrossing.create_game(), 0);
         const jump_square = {column: 6, row: 3};
 
@@ -257,7 +257,7 @@ describe("King's Crossing", function () {
         );
     });
 
-    it("allows Queen's Wrath to spawn a rook on a safe empty square", function () {
+    it("allows Queen's Wrath to spawn a safe rook", function () {
         const game = final_duel_game();
         const rook_position = {column: 0, row: 3};
 
@@ -288,7 +288,7 @@ describe("King's Crossing", function () {
         );
     });
 
-    it("prevents Queen's Wrath from using occupied or blocked squares", function () {
+    it("prevents Queen's Wrath on blocked squares", function () {
         const game = final_duel_game();
 
         assert.equal(
@@ -313,7 +313,7 @@ describe("King's Crossing", function () {
         );
     });
 
-    it("lets White win the final duel by reaching the royal guard row", function () {
+    it("lets White win by reaching the royal guard row", function () {
         const game = with_state(KingCrossing.create_game(), {
             phase: "move_king",
             result: "playing",
@@ -358,7 +358,7 @@ describe("King's Crossing", function () {
         assert.equal(
             won_game.result,
             "won",
-            "Touching the row under the royal guard should end the crossing,\n" +
+            "Touching the royal guard row should end the crossing,\n" +
             "even if the queen controls that square.\n" +
             explain_game(won_game)
         );
@@ -412,7 +412,7 @@ describe("King's Crossing", function () {
         );
     });
 
-    it("plays the countdown demo through 12 turns without a reset", function () {
+    it("plays the countdown demo without a reset", function () {
         const game = play_countdown_demo_turns();
 
         assert.equal(game.result, "playing");
@@ -420,7 +420,7 @@ describe("King's Crossing", function () {
         assert.equal(game.phase, "royal_guard_arrival");
     });
 
-    it("continues the guided tutorial route into the queen arrival", function () {
+    it("continues the tutorial route into the queen arrival", function () {
         const game = play_guided_tutorial_countdown();
 
         assert.equal(game.result, "playing");

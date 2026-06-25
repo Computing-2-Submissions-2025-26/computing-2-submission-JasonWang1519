@@ -1,8 +1,8 @@
 /**
  * KingCrossing is a module for modelling and playing King's Crossing.
- * It owns the board rules, legal moves, turn phases, and AI choices. The browser
- * can ask questions about the game or request a move, but the state transition is
- * decided here.
+ * It owns the board rules, legal moves, turn phases, and AI choices.
+ * The browser can ask questions about the game or request a move, but the
+ * state transition is decided here.
  *
  * @namespace KingCrossing
  * @version King's Crossing
@@ -33,7 +33,8 @@ const KingCrossing = Object.create(null);
  * @property {Piece[]} pieces Black pieces on the board.
  * @property {Position|undefined} queen The Grand Regent Queen's square.
  * @property {boolean} queen_active Whether the final duel has begun.
- * @property {boolean} royal_guard_active Whether the royal guard blocks the top.
+ * @property {boolean} royal_guard_active Whether the royal guard blocks the
+ * top.
  * @property {number} turn Completed upward moves.
  * @property {number} target_turns Turns needed before the queen arrives.
  * @property {string} phase The current legal action.
@@ -41,7 +42,8 @@ const KingCrossing = Object.create(null);
  * @property {number} dodge_moves Sideways moves made before Black acts again.
  * @property {string} next_piece The next piece in Black's placement cycle.
  * @property {Piece|undefined} attacker The piece that ended the game.
- * @property {number} pending_scroll_rows Rows waiting to scroll after a forward move.
+ * @property {number} pending_scroll_rows Rows waiting to scroll after a
+ * forward move.
  */
 
 const EMPTY = "empty";
@@ -348,7 +350,12 @@ const pawn_attacks_from = function (game, pawn) {
     ].filter((position) => KingCrossing.is_inside_grid(game, position));
 };
 
-const sliding_attacks_from = function (game, piece, directions, ignore_position) {
+const sliding_attacks_from = function (
+    game,
+    piece,
+    directions,
+    ignore_position
+) {
     return directions.reduce(function (attacks, direction) {
         let current = {
             column: piece.column + direction.column,
@@ -360,7 +367,10 @@ const sliding_attacks_from = function (game, piece, directions, ignore_position)
 
             if (
                 is_any_piece_at(game, current) &&
-                (ignore_position === undefined || !same_position(current, ignore_position))
+                (
+                    ignore_position === undefined ||
+                    !same_position(current, ignore_position)
+                )
             ) {
                 break;
             }
@@ -376,7 +386,12 @@ const sliding_attacks_from = function (game, piece, directions, ignore_position)
 };
 
 const bishop_attacks_from = function (game, bishop, ignore_position) {
-    return sliding_attacks_from(game, bishop, bishop_directions, ignore_position);
+    return sliding_attacks_from(
+        game,
+        bishop,
+        bishop_directions,
+        ignore_position
+    );
 };
 
 const queen_attacks_from = function (game, queen, ignore_position) {
@@ -432,7 +447,10 @@ KingCrossing.all_attacked_squares = function (game) {
 
 const attacker_of_square = function (game, position, ignore_position) {
     return all_attackers(game).find(function (piece) {
-        if (ignore_position !== undefined && same_position(piece, ignore_position)) {
+        if (
+            ignore_position !== undefined &&
+            same_position(piece, ignore_position)
+        ) {
             return false;
         }
         return attacks_from(game, piece, ignore_position).some(
@@ -476,7 +494,10 @@ KingCrossing.is_piece_defended = function (game, position) {
  * @returns {boolean} True if the active queen or Black pieces attack the king.
  */
 KingCrossing.is_king_in_check = function (game) {
-    return game.queen_active && attacker_of_square(game, game.king) !== undefined;
+    return (
+        game.queen_active &&
+        attacker_of_square(game, game.king) !== undefined
+    );
 };
 
 const game_with_phase = function (game, phase) {
@@ -570,7 +591,8 @@ const begin_royal_guard_arrival = function (game) {
  * @memberof KingCrossing
  * @function begin_queen_arrival
  * @param {Game} game The current game state.
- * @returns {Game} The queen arrival state, or the unchanged game if it has ended.
+ * @returns {Game} The queen arrival state, or the unchanged game if it has
+ * ended.
  */
 KingCrossing.begin_queen_arrival = function (game) {
     if (game.result !== "playing") {
@@ -644,7 +666,11 @@ const check_king_safety_after_move = function (game) {
     }
 
     if (queen_at(game, game.king)) {
-        const queen_piece = make_piece(QUEEN, game.queen.column, game.queen.row);
+        const queen_piece = make_piece(
+            QUEEN,
+            game.queen.column,
+            game.queen.row
+        );
         return lose_game(game, queen_piece);
     }
 
@@ -787,7 +813,8 @@ KingCrossing.place_piece = function (game, column) {
  * @memberof KingCrossing
  * @function finish_forward_move
  * @param {Game} game The current game state.
- * @returns {Game} The scrolled game, or the unchanged game if this is not legal.
+ * @returns {Game} The scrolled game, or the unchanged game if this is not
+ * legal.
  */
 KingCrossing.finish_forward_move = function (game) {
     if (game.result !== "playing" || game.phase !== "scroll_world") {
@@ -1025,7 +1052,11 @@ const is_clear_queen_path = function (game, target_position) {
         return false;
     }
 
-    const column_step = column_diff === 0 ? 0 : column_diff / Math.abs(column_diff);
+    const column_step = (
+        column_diff === 0
+        ? 0
+        : column_diff / Math.abs(column_diff)
+    );
     const row_step = row_diff === 0 ? 0 : row_diff / Math.abs(row_diff);
 
     let current = {
@@ -1034,7 +1065,10 @@ const is_clear_queen_path = function (game, target_position) {
     };
 
     while (!same_position(current, target_position)) {
-        if (is_any_piece_at(game, current) || same_position(game.king, current)) {
+        if (
+            is_any_piece_at(game, current) ||
+            same_position(game.king, current)
+        ) {
             return false;
         }
         current = {
@@ -1107,7 +1141,8 @@ KingCrossing.move_queen_to = function (game, target_position) {
 /**
  * Check if Queen's Wrath can place a rook on a target square.
  *
- * The rook must be on a clear board square and cannot immediately check the king.
+ * The rook must be on a clear board square and cannot immediately check the
+ * king.
  *
  * @memberof KingCrossing
  * @function can_spawn_wrath_rook
@@ -1354,14 +1389,18 @@ const king_escape_score = function (game, moved_game, target_position) {
         return -10000;
     }
 
-    const captured_piece_bonus = (game.pieces.length - moved_game.pieces.length) * 80;
+    const captured_piece_bonus = (
+        game.pieces.length - moved_game.pieces.length
+    ) * 80;
     const upward_progress = target_position.row * 30;
     const forward_bonus = target_position.row > game.king.row ? 120 : 0;
     const center = (game.width - 1) / 2;
     const center_bonus = 10 - Math.abs(target_position.column - center) * 3;
-    const danger_penalty = KingCrossing.is_square_attacked(game, target_position)
+    const danger_penalty = (
+        KingCrossing.is_square_attacked(game, target_position)
         ? 120
-        : 0;
+        : 0
+    );
 
     return (
         upward_progress +
@@ -1409,14 +1448,19 @@ KingCrossing.choose_countdown_king_move = function (game) {
         return scripted_choice;
     }
 
-    const safe_choices = safe_king_replies(game).map(function (target_position) {
-        const moved_game = KingCrossing.move_king_to(game, target_position);
-        return {
-            position: target_position,
-            royal_jump: false,
-            score: king_escape_score(game, moved_game, target_position)
-        };
-    });
+    const safe_choices = safe_king_replies(game).map(
+        function (target_position) {
+            const moved_game = KingCrossing.move_king_to(
+                game,
+                target_position
+            );
+            return {
+                position: target_position,
+                royal_jump: false,
+                score: king_escape_score(game, moved_game, target_position)
+            };
+        }
+    );
 
     if (safe_choices.length === 0) {
         return KingCrossing.choose_ai_king_move(game);
@@ -1463,9 +1507,13 @@ const placement_pressure_score = function (game, placed_game, column) {
     });
     const route_pressure = piece_route_pressure(game, placed_game, piece);
     const lane_pressure = escape_lane_pressure(game, placed_game, piece);
-    const direct_attack = attacks_from(placed_game, piece).some(function (attack) {
-        return same_position(attack, game.king);
-    }) ? 300 : 0;
+    const direct_attack = (
+        attacks_from(placed_game, piece).some(function (attack) {
+            return same_position(attack, game.king);
+        })
+        ? 300
+        : 0
+    );
     const file_pressure = game.width - Math.abs(column - game.king.column);
     const center_bonus = center_pressure_score(game, column);
     const blocked_top_bonus = placed_game.pieces.length * 8;
