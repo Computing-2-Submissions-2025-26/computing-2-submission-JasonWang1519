@@ -17,6 +17,15 @@ const explain_game = function (game) {
     return JSON.stringify(game, null, 4);
 };
 
+const includes_position = function (positions, position) {
+    return positions.some(function (candidate) {
+        return (
+            candidate.column === position.column &&
+            candidate.row === position.row
+        );
+    });
+};
+
 const play_countdown_demo_turns = function () {
     let game = KingCrossing.create_game();
     let safety_counter = 0;
@@ -105,6 +114,33 @@ describe("King's Crossing", function () {
         );
     });
 
+    it("reports attacked squares for Black chess pieces", function () {
+        const game = with_state(KingCrossing.create_game(), {
+            pieces: [
+                {type: KingCrossing.KNIGHT, column: 3, row: 4},
+                {type: KingCrossing.BISHOP, column: 5, row: 5}
+            ]
+        });
+
+        const attacked_squares = KingCrossing.all_attacked_squares(game);
+
+        assert.equal(
+            includes_position(attacked_squares, {column: 1, row: 5}),
+            true,
+            "The knight should attack in an L shape."
+        );
+        assert.equal(
+            includes_position(attacked_squares, {column: 7, row: 7}),
+            true,
+            "The bishop should attack along its diagonal."
+        );
+        assert.equal(
+            includes_position(attacked_squares, {column: 5, row: 6}),
+            false,
+            "The bishop should not attack straight upward."
+        );
+    });
+
     it("leaves the game unchanged when an action is not legal", function () {
         const game = KingCrossing.create_game();
         const waiting_for_black = KingCrossing.move_king_to(
@@ -190,6 +226,16 @@ describe("King's Crossing", function () {
             ended_game,
             "White should not move after the result is decided."
         );
+        assert.strictEqual(
+            KingCrossing.move_queen_to(ended_game, {column: 4, row: 4}),
+            ended_game,
+            "The queen should not move after the result is decided."
+        );
+        assert.strictEqual(
+            KingCrossing.spawn_wrath_rook(ended_game, {column: 2, row: 4}),
+            ended_game,
+            "Queen's Wrath should not run after the result is decided."
+        );
     });
 
     it("cycles Black Pieces through pawn, knight, and bishop", function () {
@@ -210,6 +256,29 @@ describe("King's Crossing", function () {
         game = KingCrossing.place_piece(game, 2);
         assert.equal(KingCrossing.cell_token(game, {column: 2, row: 8}), 4);
         assert.equal(game.next_piece, "pawn");
+    });
+
+    it("seals the crossing when the whole top row is filled", function () {
+        const game = with_state(KingCrossing.create_game(), {
+            pieces: Array.from({length: 7}, function (_, column) {
+                return {
+                    type: KingCrossing.PAWN,
+                    column,
+                    row: 8
+                };
+            })
+        });
+
+        assert.equal(KingCrossing.is_crossing_sealed(game), false);
+
+        const sealed_game = KingCrossing.place_piece(game, 7);
+
+        assert.equal(
+            sealed_game.result,
+            "sealed",
+            "Filling the last top-row file should seal the crossing.\n" +
+            explain_game(sealed_game)
+        );
     });
 
     it("allows the king to capture only undefended Black pieces", function () {
@@ -254,6 +323,41 @@ describe("King's Crossing", function () {
         );
     });
 
+    it("moves the queen along clear queen lines", function () {
+        const game = final_duel_game();
+
+        assert.equal(
+            KingCrossing.is_queen_move_legal(game, {column: 4, row: 5}),
+            true,
+            "The queen should be able to move straight down."
+        );
+        assert.equal(
+            KingCrossing.is_queen_move_legal(game, {column: 6, row: 4}),
+            true,
+            "The queen should be able to move diagonally."
+        );
+        assert.equal(
+            KingCrossing.is_queen_move_legal(game, {column: 5, row: 4}),
+            false,
+            "The queen should not move like a knight."
+        );
+
+        const blocked_game = with_state(game, {
+            pieces: [
+                {type: KingCrossing.PAWN, column: 4, row: 5}
+            ]
+        });
+
+        assert.equal(
+            KingCrossing.is_queen_move_legal(
+                blocked_game,
+                {column: 4, row: 3}
+            ),
+            false,
+            "A piece between the queen and target should block the route."
+        );
+    });
+
     it("allows Queen's Wrath to spawn a safe rook", function () {
         const game = final_duel_game();
         const rook_position = {column: 0, row: 3};
@@ -269,6 +373,19 @@ describe("King's Crossing", function () {
         assert.equal(
             KingCrossing.cell_token(next_game, rook_position),
             7
+        );
+    });
+
+    it("lists legal moves without sharing mutable state", function () {
+        const game = KingCrossing.place_piece(KingCrossing.create_game(), 0);
+        const targets = KingCrossing.legal_king_targets(game);
+
+        targets[0].column = 99;
+
+        assert.notEqual(
+            KingCrossing.legal_king_targets(game)[0].column,
+            99,
+            "Legal move lists should be copies, not live game state."
         );
     });
 
