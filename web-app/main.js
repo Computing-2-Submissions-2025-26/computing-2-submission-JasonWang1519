@@ -1733,7 +1733,7 @@ const is_pawn_wave_source_square = function (position) {
     return (
         pawn_wave_active &&
         position.row === 0 &&
-        position.column > pawn_wave_column
+        position.column <= pawn_wave_column
     );
 };
 
