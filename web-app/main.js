@@ -1,36 +1,15 @@
 /*jslint browser: true */
 import KingCrossing from "./KingCrossing.js";
 import {
+    piece_labels,
+    piece_symbols,
+    player_types
+} from "./display_tokens.js";
+import {
     tutorial_practice_steps,
     tutorial_rule_steps
 } from "./tutorial_steps.js";
-
-const piece_symbols = [
-    "",
-    "♔",
-    "♞",
-    "♟",
-    "♝",
-    "♛",
-    "♙",
-    "♜"
-];
-
-const piece_labels = [
-    "Empty square",
-    "White king",
-    "Black knight",
-    "Pursuing pawn wall",
-    "Black bishop",
-    "Grand Regent Queen",
-    "Royal guard pawn",
-    "Queen's Wrath rook"
-];
-
-const player_types = {
-    "1": "White Pieces",
-    "2": "Black Pieces"
-};
+import create_ui_elements from "./ui_elements.js";
 
 const visual_extra_top_rows = 2;
 const visual_extra_bottom_rows = 1;
@@ -71,9 +50,6 @@ const range = function (start, end) {
 const reverse = function (values) {
     return values.slice().reverse();
 };
-
-const game_board = el("game_board");
-const result_dialog = el("result_dialog");
 
 let game = KingCrossing.create_game();
 
@@ -156,221 +132,25 @@ const tutorial_queen_rook_click_time = 3300;
 const tutorial_queen_vision_cycle = 4600;
 const tutorial_queen_vision_click_time = 1500;
 
-el("title").textContent = "King's Crossing";
-el("home_player_type").textContent = player_types["1"];
-el("away_player_type").textContent = player_types["2"];
-el("home_ready").textContent = "The king enters the crossing...";
-el("away_ready").textContent = "Black is waiting.";
-
-const instructions_button = document.createElement("button");
-instructions_button.id = "instructions_button";
-instructions_button.type = "button";
-instructions_button.textContent = "Instructions";
-instructions_button.setAttribute("aria-label", "Open the game instructions");
-document.body.append(instructions_button);
-
-const single_player_button = document.createElement("button");
-single_player_button.id = "single_player_button";
-single_player_button.type = "button";
-single_player_button.textContent = "Single Player";
-single_player_button.setAttribute("aria-label", "Open single-player choices");
-document.body.append(single_player_button);
-
-const single_player_dialog = document.createElement("div");
-single_player_dialog.id = "single_player_dialog";
-single_player_dialog.className = "hidden";
-single_player_dialog.setAttribute("role", "dialog");
-single_player_dialog.setAttribute("aria-modal", "true");
-single_player_dialog.setAttribute("aria-labelledby", "single_player_heading");
-single_player_dialog.innerHTML = `
-    <section id="single_player_card">
-        <h2 id="single_player_heading">Single Player</h2>
-        <p>Choose your side. The AI will play the other pieces.</p>
-        <div id="single_player_choices">
-            <button id="choose_white_pieces" data-side="white" type="button">
-                Play White Pieces
-            </button>
-            <button id="choose_black_pieces" data-side="black" type="button">
-                Play Black Pieces
-            </button>
-        </div>
-    </section>
-`;
-document.body.append(single_player_dialog);
-
-const eagle_vision_button = document.createElement("button");
-eagle_vision_button.id = "eagle_vision_button";
-eagle_vision_button.type = "button";
-eagle_vision_button.setAttribute("aria-label", "Use Eagle Vision");
-eagle_vision_button.innerHTML = `
-    <span id="eagle_vision_label">Eagle Vision</span>
-    <span id="eagle_vision_status">Ready</span>
-    <span id="eagle_vision_bar">
-        <span id="eagle_vision_fill"></span>
-    </span>
-`;
-document.body.append(eagle_vision_button);
-
-const royal_jump_button = document.createElement("button");
-royal_jump_button.id = "royal_jump_button";
-royal_jump_button.type = "button";
-royal_jump_button.setAttribute("aria-label", "Use Royal Jump");
-royal_jump_button.innerHTML = `
-    <span id="royal_jump_label">Royal Jump</span>
-    <span id="royal_jump_status">Ready</span>
-    <span id="royal_jump_bar">
-        <span id="royal_jump_fill"></span>
-    </span>
-`;
-document.body.append(royal_jump_button);
-
-const queens_wrath_button = document.createElement("button");
-queens_wrath_button.id = "queens_wrath_button";
-queens_wrath_button.type = "button";
-queens_wrath_button.setAttribute("aria-label", "Use Queen's Wrath");
-queens_wrath_button.innerHTML = `
-    <span id="queens_wrath_label">Queen's Wrath</span>
-    <span id="queens_wrath_status">Final duel</span>
-`;
-document.body.append(queens_wrath_button);
-
-const queen_progress_panel = document.createElement("section");
-queen_progress_panel.id = "queen_progress_panel";
-queen_progress_panel.setAttribute("aria-label", "Grand Regent Queen progress");
-queen_progress_panel.innerHTML = `
-    <span id="queen_progress_label">Grand Regent Queen</span>
-    <span id="queen_progress_status" aria-live="polite">0/12</span>
-    <span id="queen_progress_bar">
-        <span id="queen_progress_fill"></span>
-    </span>
-`;
-document.body.append(queen_progress_panel);
-
-const queen_notice = document.createElement("div");
-queen_notice.id = "queen_notice";
-queen_notice.className = "hidden";
-queen_notice.setAttribute("aria-live", "polite");
-queen_notice.innerHTML = `
-    <span id="queen_notice_icon">♛</span>
-    <span id="queen_notice_text">
-        Grand Regent Queen will arrive in 12 moves
-    </span>
-`;
-document.body.append(queen_notice);
-
-const instructions_dialog = document.createElement("dialog");
-instructions_dialog.id = "instructions_dialog";
-instructions_dialog.setAttribute("aria-labelledby", "instructions_heading");
-instructions_dialog.innerHTML = `
-    <section id="instructions_card">
-        <h2 id="instructions_heading">How to Play</h2>
-        <p>
-            <strong>White Pieces:</strong> guide the king upward and look for
-            a clear route through the crossing.
-        </p>
-        <p>
-            <strong>Black Pieces:</strong> choose where new threats appear on
-            the top row and try to close the route.
-        </p>
-        <p>You can play with the mouse by clicking a legal square.</p>
-        <p>
-            You can also play with the keyboard like a remote: move the
-            selector, then press <strong>Space</strong> to confirm.
-        </p>
-        <p>
-            White uses <strong>W A S D</strong> to choose the king's square.
-            Black uses the <strong>Left</strong> and
-            <strong>Right</strong> arrows when placing a new piece.
-        </p>
-        <p>
-            In the queen duel, Black presses <strong>Tab</strong> to switch
-            between the queen and Queen's Wrath, uses the arrow keys to choose
-            a legal square, then presses <strong>Space</strong>.
-        </p>
-        <p>
-            <strong>Eagle Vision</strong> reveals danger.
-            <strong>Royal Jump</strong> gives the king a longer leap when it is
-            charged.
-        </p>
-        <p>
-            White has the harder role because the king must keep finding safe
-            routes while the wall and Black Pieces close in.
-        </p>
-        <p>
-            The queen counter appears after Black's first move. When it fills,
-            the Grand Regent Queen arrives.
-        </p>
-        <p>
-            White wins by reaching the row beneath the royal guard. Black wins
-            by trapping the king or sealing the crossing.
-        </p>
-        <p class="click_hint">Click anywhere to close.</p>
-    </section>
-`;
-document.body.append(instructions_dialog);
-
-const tutorial_title_screen = document.createElement("div");
-tutorial_title_screen.id = "tutorial_title_screen";
-tutorial_title_screen.innerHTML = `
-    <span id="tutorial_title_text">King's Crossing</span>
-    <span id="tutorial_title_hint">Click anywhere to proceed.</span>
-`;
-document.body.append(tutorial_title_screen);
-
-const tutorial_duel_screen = document.createElement("div");
-tutorial_duel_screen.id = "tutorial_duel_screen";
-tutorial_duel_screen.className = "hidden";
-tutorial_duel_screen.innerHTML = `
-    <span id="tutorial_duel_heading">A Two Player Game</span>
-    <span id="tutorial_duel_layout">
-        <span class="tutorial_player_card">
-            <span class="tutorial_white_piece">♔</span>
-            <span class="tutorial_player_label">Player 1: White Pieces</span>
-        </span>
-        <span class="tutorial_player_card">
-            <span class="tutorial_black_pieces">♟ ♞ ♝ ♛ ♜</span>
-            <span class="tutorial_player_label">Player 2: Black Pieces</span>
-        </span>
-    </span>
-    <span id="tutorial_duel_hint">Click anywhere to begin.</span>
-`;
-document.body.append(tutorial_duel_screen);
-
-const tutorial_control_button = document.createElement("button");
-tutorial_control_button.id = "tutorial_control_button";
-tutorial_control_button.type = "button";
-tutorial_control_button.textContent = "Skip tutorial";
-tutorial_control_button.setAttribute(
-    "aria-label",
-    "Start or skip the tutorial"
-);
-document.body.append(tutorial_control_button);
-
-const tutorial_slide_number = document.createElement("div");
-tutorial_slide_number.id = "tutorial_slide_number";
-document.body.append(tutorial_slide_number);
-
-const tutorial_text = document.createElement("div");
-tutorial_text.id = "tutorial_text";
-tutorial_text.className = "hidden";
-tutorial_text.setAttribute("aria-live", "polite");
-document.body.append(tutorial_text);
-
-const tutorial_notice = document.createElement("div");
-tutorial_notice.id = "tutorial_notice";
-tutorial_notice.className = "hidden";
-tutorial_notice.setAttribute("aria-live", "assertive");
-document.body.append(tutorial_notice);
-
-const tutorial_queen_countdown = document.createElement("div");
-tutorial_queen_countdown.id = "tutorial_queen_countdown";
-tutorial_queen_countdown.className = "hidden";
-tutorial_queen_countdown.innerHTML = `
-    <span id="tutorial_queen_countdown_icon">♛</span>
-    <span id="tutorial_queen_countdown_label">Grand Regent Queen</span>
-    <span id="tutorial_queen_countdown_turns">0/12</span>
-`;
-document.body.append(tutorial_queen_countdown);
+const ui = create_ui_elements(document);
+const eagle_vision_button = ui.eagle_vision_button;
+const game_board = ui.game_board;
+const instructions_button = ui.instructions_button;
+const instructions_dialog = ui.instructions_dialog;
+const queen_notice = ui.queen_notice;
+const queen_progress_panel = ui.queen_progress_panel;
+const queens_wrath_button = ui.queens_wrath_button;
+const result_dialog = ui.result_dialog;
+const royal_jump_button = ui.royal_jump_button;
+const single_player_button = ui.single_player_button;
+const single_player_dialog = ui.single_player_dialog;
+const tutorial_control_button = ui.tutorial_control_button;
+const tutorial_duel_screen = ui.tutorial_duel_screen;
+const tutorial_notice = ui.tutorial_notice;
+const tutorial_queen_countdown = ui.tutorial_queen_countdown;
+const tutorial_slide_number = ui.tutorial_slide_number;
+const tutorial_text = ui.tutorial_text;
+const tutorial_title_screen = ui.tutorial_title_screen;
 
 const same_position = function (first, second) {
     return (
