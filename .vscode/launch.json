@@ -17,14 +17,14 @@
             ]
         },
         {
-            "name": "Debug KingCrossingProto.js",
+            "name": "Debug KingCrossing.js",
             "type": "node",
             "request": "launch",
             "skipFiles": [
                 "${workspaceFolder}/node_modules/**",
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/web-app/KingCrossingProto.js"
+            "program": "${workspaceFolder}/web-app/KingCrossing.js"
         },
         {
             "name": "Generate Docs",

@@ -52,10 +52,19 @@ interface. The rules for movement, captures, the queen duel, AI choices, and end
 states are kept in `KingCrossing.js` so the game can also be played and tested
 from code.
 
+## Installation
+
+- Clone the repository.
+- Run `npm install` in the root directory to install the development tools.
+
 ## Running
 
-Open `web-app/index.html` in a browser, or serve the folder with a local static
-server.
+The game opens the same way as the example coursework web apps:
+
+- In VS Code, run `Run Web App - Firefox` from the Run and Debug panel.
+- Or open `web-app/index.html` directly in Firefox.
+- If a browser blocks local module files, serve the `web-app` folder with a
+  static server and open the local address.
 
 Useful commands:
 
