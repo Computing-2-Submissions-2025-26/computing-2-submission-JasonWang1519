@@ -101,14 +101,14 @@ main
 
 #game_board
 {
-    aspect-ratio: 8 / 11;
+    aspect-ratio: 8 / 12;
     box-shadow: 0 0 34px #000000;
-    height: calc(96% * 11 / 9);
+    height: calc(96% * 12 / 9);
     line-height: normal;
     max-height: none;
     max-width: 96%;
     --board-scroll-end: 0%;
-    transform: translateY(calc(-100% / 11));
+    transform: translateY(calc(-100% / 12));
     transition: transform 450ms ease-in-out;
     white-space: nowrap;
 }
@@ -140,7 +140,7 @@ main
     font-family: "Times New Roman", Georgia, serif;
     font-size: clamp(24px, 5.5vmin, 64px);
     font-weight: bold;
-    height: calc(100% / 11);
+    height: calc(100% / 12);
     justify-content: center;
     line-height: 1;
     position: relative;
@@ -886,12 +886,6 @@ aside > *
     line-height: 2;
 }
 
-#result_winner
-{
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 18pt;
-    font-weight: bold;
-}
 /* =============================================== */
 /* Stable Tutorial Overlay                         */
 /* =============================================== */

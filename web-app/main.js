@@ -28,7 +28,7 @@ const player_types = {
     "2": "Black Pieces"
 };
 
-const visual_extra_top_rows = 1;
+const visual_extra_top_rows = 2;
 const visual_extra_bottom_rows = 1;
 
 const opening_king_step_delay = 270;
@@ -267,6 +267,7 @@ instructions_dialog.innerHTML = `
         <p>White uses <strong>W A S D</strong> to choose the king's square. Black uses the <strong>Left</strong> and <strong>Right</strong> arrows when placing a new piece.</p>
         <p>In the queen duel, Black presses <strong>Tab</strong> to switch between the queen and Queen's Wrath, uses the arrow keys to choose a legal square, then presses <strong>Space</strong>.</p>
         <p><strong>Eagle Vision</strong> reveals danger. <strong>Royal Jump</strong> gives the king a longer leap when it is charged.</p>
+        <p>White has the harder role because the king must keep finding safe routes while the wall and Black Pieces close in.</p>
         <p>The queen counter appears after Black's first move. When it fills, the Grand Regent Queen arrives.</p>
         <p>White wins by reaching the row beneath the royal guard. Black wins by trapping the king or sealing the crossing.</p>
         <p class="click_hint">Click anywhere to close.</p>
@@ -1731,17 +1732,15 @@ const is_opening_pawn_target_square = function (position) {
 const is_pawn_wave_source_square = function (position) {
     return (
         pawn_wave_active &&
-        position.row >= 0 &&
-        position.row < pawn_wave_rows &&
-        position.column <= pawn_wave_column
+        position.row === 0 &&
+        position.column > pawn_wave_column
     );
 };
 
 const is_pawn_wave_target_square = function (position) {
     return (
         pawn_wave_active &&
-        position.row > 0 &&
-        position.row <= pawn_wave_rows &&
+        position.row === pawn_wave_rows &&
         position.column <= pawn_wave_column
     );
 };
@@ -3969,21 +3968,21 @@ const open_result_dialog = function () {
     }
 
     if (game.result === "won") {
-        el("result_winner").textContent = "Player 1 Wins";
+        el("result_winner").textContent = "Player 1 wins";
         el("result_message").textContent = (
             "The king reached the royal boundary and escaped the Grand Regent Queen."
         );
     }
 
     if (game.result === "sealed") {
-        el("result_winner").textContent = "Player 2 Wins";
+        el("result_winner").textContent = "Player 2 wins";
         el("result_message").textContent = (
             "The black pieces filled the road ahead. The king was trapped between the soldiers and the pawn wall."
         );
     }
 
     if (game.result === "lost") {
-        el("result_winner").textContent = "Player 2 Wins";
+        el("result_winner").textContent = "Player 2 wins";
         el("result_message").textContent = (
             `The king moved into a square controlled by ${piece_name(game.attacker)}.`
         );

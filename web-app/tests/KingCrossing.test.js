@@ -53,6 +53,8 @@ const play_guided_tutorial_countdown = function () {
     let game = KingCrossing.create_game();
     let safety_counter = 0;
 
+    // These are the player-guided tutorial moves before the fast-forward begins.
+    // The countdown should continue from this board, not reset to a fresh game.
     game = KingCrossing.place_piece(game, 4);
     game = KingCrossing.move_king_to(game, {column: 4, row: 3});
     game = KingCrossing.finish_forward_move(game);

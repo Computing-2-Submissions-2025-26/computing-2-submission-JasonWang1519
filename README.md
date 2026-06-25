@@ -11,6 +11,10 @@ The game can be played as a two-player match or as a single-player match against
 the built-in AI. In single player, choose either White Pieces or Black Pieces;
 the AI takes the other side.
 
+White Pieces are the harder side to play because the king has to keep finding
+safe routes while Black Pieces, the pawn wall, and the queen counter all build
+pressure.
+
 ## How to Play
 
 - Black Pieces place one piece on the top row in a pawn, knight, bishop cycle.
