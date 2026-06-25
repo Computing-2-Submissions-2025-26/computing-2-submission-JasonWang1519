@@ -30,14 +30,16 @@ const play_countdown_demo_turns = function () {
         safety_counter < 80
     ) {
         if (game.phase === "place_piece") {
-            const choice = KingCrossing.choose_countdown_piece_placement(game);
-            game = KingCrossing.place_piece(game, choice.column);
+            const placement_choice = (
+                KingCrossing.choose_countdown_piece_placement(game)
+            );
+            game = KingCrossing.place_piece(game, placement_choice.column);
         } else if (game.phase === "move_king") {
-            const choice = KingCrossing.choose_countdown_king_move(game);
+            const king_choice = KingCrossing.choose_countdown_king_move(game);
             game = KingCrossing.move_king_to(
                 game,
-                choice.position,
-                choice.royal_jump === true
+                king_choice.position,
+                king_choice.royal_jump === true
             );
         } else if (game.phase === "scroll_world") {
             game = KingCrossing.finish_forward_move(game);
@@ -71,14 +73,16 @@ const play_guided_tutorial_countdown = function () {
         safety_counter < 80
     ) {
         if (game.phase === "place_piece") {
-            const choice = KingCrossing.choose_countdown_piece_placement(game);
-            game = KingCrossing.place_piece(game, choice.column);
+            const placement_choice = (
+                KingCrossing.choose_countdown_piece_placement(game)
+            );
+            game = KingCrossing.place_piece(game, placement_choice.column);
         } else if (game.phase === "move_king") {
-            const choice = KingCrossing.choose_countdown_king_move(game);
+            const king_choice = KingCrossing.choose_countdown_king_move(game);
             game = KingCrossing.move_king_to(
                 game,
-                choice.position,
-                choice.royal_jump === true
+                king_choice.position,
+                king_choice.royal_jump === true
             );
         } else if (game.phase === "scroll_world") {
             game = KingCrossing.finish_forward_move(game);

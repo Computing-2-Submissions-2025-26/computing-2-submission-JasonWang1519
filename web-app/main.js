@@ -1,4 +1,4 @@
-/*jslint browser */
+/*jslint browser: true */
 import KingCrossing from "./KingCrossing.js?v=kings-crossing";
 
 const piece_symbols = [
@@ -3661,28 +3661,28 @@ const apply_ai_king_move = function () {
 
 const apply_ai_black_move = function () {
     if (game.phase === "place_piece") {
-        const choice = KingCrossing.choose_ai_piece_placement(game);
+        const placement_choice = KingCrossing.choose_ai_piece_placement(game);
 
-        if (choice !== undefined) {
-            game = KingCrossing.place_piece(game, choice.column);
+        if (placement_choice !== undefined) {
+            game = KingCrossing.place_piece(game, placement_choice.column);
             reveal_queen_meter_after_first_piece();
         }
         return;
     }
 
     if (game.phase === "move_queen") {
-        const choice = KingCrossing.choose_ai_queen_action(game);
+        const queen_choice = KingCrossing.choose_ai_queen_action(game);
 
-        if (choice === undefined) {
+        if (queen_choice === undefined) {
             return;
         }
 
-        if (choice.type === "spawn_wrath_rook") {
-            game = KingCrossing.spawn_wrath_rook(game, choice.position);
+        if (queen_choice.type === "spawn_wrath_rook") {
+            game = KingCrossing.spawn_wrath_rook(game, queen_choice.position);
             return;
         }
 
-        game = KingCrossing.move_queen_to(game, choice.position);
+        game = KingCrossing.move_queen_to(game, queen_choice.position);
     }
 };
 
