@@ -1731,6 +1731,57 @@ KingCrossing.cell_token = function (game, position) {
     return token_for_piece_type(KingCrossing.piece_type_at(game, position));
 };
 
+/**
+ * Return a browser-safe view of the current game.
+ *
+ * The browser may read this object for drawing and status text. It still asks
+ * this module to make every real move, so UI code does not mutate rule state.
+ *
+ * @memberof KingCrossing
+ * @function visible_state
+ * @param {Game} game The current game state.
+ * @returns {object} A copied snapshot for display code.
+ */
+KingCrossing.visible_state = function (game) {
+    return Object.freeze({
+        width: game.width,
+        height: game.height,
+        king: copy_position(game.king),
+        pieces: Object.freeze(game.pieces.map(copy_piece)),
+        queen: copy_position(game.queen),
+        queen_active: game.queen_active,
+        royal_guard_active: game.royal_guard_active,
+        turn: game.turn,
+        target_turns: game.target_turns,
+        phase: game.phase,
+        result: game.result,
+        dodge_moves: game.dodge_moves,
+        next_piece: game.next_piece,
+        attacker: (
+            game.attacker === undefined
+            ? undefined
+            : copy_piece(game.attacker)
+        ),
+        pending_scroll_rows: game.pending_scroll_rows,
+        status: KingCrossing.status_message(game),
+        legal_king_targets: Object.freeze(
+            KingCrossing.legal_king_targets(game)
+        ),
+        legal_placement_columns: Object.freeze(
+            KingCrossing.legal_placement_columns(game)
+        ),
+        legal_queen_targets: Object.freeze(
+            KingCrossing.legal_queen_targets(game)
+        ),
+        legal_wrath_targets: Object.freeze(
+            KingCrossing.legal_wrath_targets(game)
+        ),
+        cell_token_at: function (position) {
+            return KingCrossing.cell_token(game, position);
+        }
+    });
+};
+
 KingCrossing.is_inside_board = KingCrossing.is_inside_grid;
 
 /**

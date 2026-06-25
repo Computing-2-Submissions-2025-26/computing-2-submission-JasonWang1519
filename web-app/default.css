@@ -218,6 +218,28 @@ main
     box-shadow: 0 0 14px #fff5cc inset;
 }
 
+.final_duel_escape_row
+{
+    box-shadow:
+        0 0 0 4px #ffffff inset,
+        0 0 18px #ffffff99 inset,
+        0 0 14px #ffffff55;
+}
+
+.final_duel_escape_row::before
+{
+    border: 5px solid #ffffff;
+    box-shadow:
+        0 0 0 2px #111111,
+        0 0 18px #ffffff,
+        0 0 18px #ffffff66 inset;
+    content: "";
+    inset: 5px;
+    pointer-events: none;
+    position: absolute;
+    z-index: 4;
+}
+
 .ghost_piece_square,
 .ghost_king_square,
 .ghost_queen_square
@@ -887,10 +909,6 @@ aside > *
     line-height: 2;
 }
 
-/* =============================================== */
-/* Stable Tutorial Overlay                         */
-/* =============================================== */
-
 .hidden
 {
     display: none !important;
@@ -1099,15 +1117,6 @@ aside > *
     box-shadow:
         0 0 0 3px var(--banner-colour) inset,
         0 0 18px var(--banner-colour);
-}
-
-/* =============================================== */
-/* Stable Tutorial Overlay                         */
-/* =============================================== */
-
-.hidden
-{
-    display: none !important;
 }
 
 #tutorial_title_screen,
@@ -1554,33 +1563,55 @@ aside > *
 .tutorial_guided_square
 {
     box-shadow:
-        0 0 0 4px #ffffff inset,
+        0 0 0 5px #111111cc inset,
+        0 0 0 10px #ffffff inset,
         0 0 18px #ffffffcc,
         0 0 32px #f7df6f99;
+    z-index: 16;
+}
+
+.tutorial_guided_square::before
+{
+    border: 6px solid #ffffff;
+    box-shadow:
+        0 0 0 3px #111111,
+        0 0 22px #ffffff,
+        0 0 22px #f7df6f inset;
+    content: "";
+    inset: 6px;
+    pointer-events: none;
+    position: absolute;
+    z-index: 6;
 }
 
 .tutorial_guided_white
 {
-    outline: 4px solid #ffffff;
-    outline-offset: -7px;
+    outline: none;
 }
 
 .tutorial_guided_black
 {
-    outline: 4px solid #f7df6f;
-    outline-offset: -7px;
+    outline: none;
+}
+
+.tutorial_guided_black::before
+{
+    border-color: #ffe66d;
 }
 
 .tutorial_guided_royal_jump
 {
-    outline: 4px solid #f7df6f;
-    outline-offset: -7px;
+    outline: none;
+}
+
+.tutorial_guided_royal_jump::before
+{
+    border-color: #ffe66d;
 }
 
 .tutorial_guided_suggested
 {
-    outline: 4px solid #ffffff;
-    outline-offset: -7px;
+    outline: none;
 }
 
 .tutorial_ability_clicked

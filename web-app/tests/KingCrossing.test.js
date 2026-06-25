@@ -101,6 +101,7 @@ const play_guided_tutorial_countdown = function () {
 };
 
 describe("King's Crossing", function () {
+    describe("Board display and attack map", function () {
     it("reports display tokens for the starting pieces", function () {
         const game = KingCrossing.create_game();
 
@@ -112,6 +113,20 @@ describe("King's Crossing", function () {
             KingCrossing.cell_token(game, {column: 0, row: 0}),
             3
         );
+    });
+
+    it("provides a copied visible state for browser display", function () {
+        const game = KingCrossing.place_piece(KingCrossing.create_game(), 0);
+        const visible_game = KingCrossing.visible_state(game);
+
+        assert.equal(visible_game.phase, "move_king");
+        assert.equal(
+            visible_game.cell_token_at({column: 0, row: 8}),
+            3
+        );
+
+        visible_game.king.column = 99;
+        assert.notEqual(game.king.column, 99);
     });
 
     it("reports attacked squares for Black chess pieces", function () {
@@ -140,7 +155,9 @@ describe("King's Crossing", function () {
             "The bishop should not attack straight upward."
         );
     });
+    });
 
+    describe("King movement", function () {
     it("leaves the game unchanged when an action is not legal", function () {
         const game = KingCrossing.create_game();
         const waiting_for_black = KingCrossing.move_king_to(
@@ -237,7 +254,9 @@ describe("King's Crossing", function () {
             "Queen's Wrath should not run after the result is decided."
         );
     });
+    });
 
+    describe("Black placement", function () {
     it("cycles Black Pieces through pawn, knight, and bishop", function () {
         let game = KingCrossing.create_game();
 
@@ -280,7 +299,9 @@ describe("King's Crossing", function () {
             explain_game(sealed_game)
         );
     });
+    });
 
+    describe("King capture rules", function () {
     it("allows the king to capture only undefended Black pieces", function () {
         const bishop_square = {column: 4, row: 3};
         const undefended_game = with_state(KingCrossing.create_game(), {
@@ -322,7 +343,9 @@ describe("King's Crossing", function () {
             "The king should not be allowed to take a defended bishop."
         );
     });
+    });
 
+    describe("Queen duel", function () {
     it("moves the queen along clear queen lines", function () {
         const game = final_duel_game();
 
@@ -477,7 +500,9 @@ describe("King's Crossing", function () {
             explain_game(won_game)
         );
     });
+    });
 
+    describe("AI choices", function () {
     it("chooses a legal queen action for the Black AI", function () {
         const game = final_duel_game();
         const action = KingCrossing.choose_ai_queen_action(game);
@@ -525,7 +550,9 @@ describe("King's Crossing", function () {
             true
         );
     });
+    });
 
+    describe("Tutorial route", function () {
     it("plays the countdown demo without a reset", function () {
         const game = play_countdown_demo_turns();
 
@@ -540,5 +567,6 @@ describe("King's Crossing", function () {
         assert.equal(game.result, "playing");
         assert.equal(game.turn, game.target_turns);
         assert.equal(game.phase, "royal_guard_arrival");
+    });
     });
 });

@@ -44,13 +44,39 @@ pressure.
 - `web-app/KingCrossing.js` contains the pure game rules and state transitions.
 - `web-app/main.js` contains the browser UI, keyboard controls, tutorial, and
   animations.
+- `web-app/tutorial_steps.js` contains the tutorial step data.
 - `web-app/default.css` contains the board and interface styling.
 - `web-app/tests/KingCrossing.test.js` contains focused rule tests.
+- `Current_Standing_Rules.md` records the current intended rules.
 
 The browser code asks the game module what moves are legal and then redraws the
 interface. The rules for movement, captures, the queen duel, AI choices, and end
 states are kept in `KingCrossing.js` so the game can also be played and tested
 from code.
+
+## Game Module API
+
+The public API is in `web-app/KingCrossing.js`. It creates games, checks legal
+moves, applies White and Black actions, runs the queen duel, gives AI choices,
+and returns display information with `visible_state`.
+
+## Game Module Implementation
+
+The game module is written as pure state transitions. Illegal actions return the
+unchanged game, ended games do not advance, and browser code does not decide the
+rules directly.
+
+## Unit Tests
+
+The tests are grouped by behaviour: board display, king movement, Black
+placement, capture rules, queen duel, AI choices, and the guided tutorial route.
+There is also a route playtest for the countdown and final duel path.
+
+## Web Application
+
+The web app uses HTML for structure, CSS for presentation, and `main.js` for
+browser behaviour. It supports mouse input, keyboard input, tutorial play,
+two-player mode, single-player mode, animations, and result dialogs.
 
 ## Installation
 
@@ -63,12 +89,24 @@ The game opens the same way as the example coursework web apps:
 
 - In VS Code, run `Run Web App - Firefox` from the Run and Debug panel.
 - Or open `web-app/index.html` directly in Firefox.
-- If a browser blocks local module files, serve the `web-app` folder with a
-  static server and open the local address.
+- Or run `npm start` and open the address shown in the terminal.
 
 Useful commands:
 
 ```sh
+npm start
 npm test
+npm run playtest
 npm run docs
 ```
+
+## Manual Smoke Test
+
+Before final submission, open the game in Firefox and check:
+
+- the tutorial can be played and skipped;
+- the two-player game starts correctly;
+- single-player mode lets you choose White or Black;
+- Royal Jump and Eagle Vision still work;
+- the queen counter reaches the final duel;
+- `npm test`, `npm run playtest`, and `npm run docs` complete successfully.
