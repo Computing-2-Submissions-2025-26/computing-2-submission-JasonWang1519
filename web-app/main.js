@@ -4323,7 +4323,10 @@ const start_opening_animation = function () {
 const finish_board_scroll_animation = function () {
     game_board.classList.add("no_scroll_transition");
     game_board.classList.remove("board_scroll_animation");
-    game_board.style.setProperty("--board-scroll-end", "0%");
+    game_board.style.setProperty(
+        "--board-scroll-end",
+        "var(--board-resting-offset)"
+    );
 
     pawn_wave_active = false;
     pawn_wave_column = -1;
@@ -4347,7 +4350,9 @@ const start_board_scroll_animation = function () {
         visual_extra_bottom_rows
     );
     const scroll_rows = KingCrossing.pending_scroll_rows(game);
-    const scroll_end_percent = ((scroll_rows - 1) * 100) / row_count;
+    const scroll_end_percent = (
+        (scroll_rows - visual_extra_top_rows) * 100
+    ) / row_count;
 
     game_board.classList.remove("no_scroll_transition");
     game_board.style.setProperty(

@@ -107,8 +107,9 @@ main
     line-height: normal;
     max-height: none;
     max-width: 96%;
-    --board-scroll-end: 0%;
-    transform: translateY(calc(-100% / 12));
+    --board-resting-offset: calc(-200% / 12);
+    --board-scroll-end: var(--board-resting-offset);
+    transform: translateY(var(--board-resting-offset));
     transition: transform 450ms ease-in-out;
     white-space: nowrap;
 }
